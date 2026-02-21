@@ -2,6 +2,8 @@ import { Route, Routes, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import HubCard from './HubCard.jsx'
 import ControlPanel from './ControlPanel.jsx'
+import DrawControl from './DrawControl.jsx'
+import LayoutManager from './LayoutManager.jsx'
 
 const SERVER_ADDRESS = '192.168.1.190:3000'
 
@@ -34,7 +36,7 @@ function DashboardPage() {
       title: 'DRAWCONTROL',
       subtitle: 'Layout tools (placeholder)',
       accent: '#22c55e',
-      open: () => navigate('/display'),
+      open: () => navigate('/layouts'),
       copy: () => copy(`http://${SERVER_ADDRESS}/overlay/?id=default_draft`)
     },
     {
@@ -101,6 +103,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/control" element={<ControlPanel />} />
+          <Route path="/layouts" element={<LayoutManager />} />
+          <Route path="/draw/:id" element={<DrawControl />} />
           <Route path="/display" element={<DisplayOverlayPage />} />
         </Routes>
       </main>

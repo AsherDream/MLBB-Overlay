@@ -17,9 +17,33 @@
             width: 1920px;
             height: 1080px;
             position: relative;
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-size: cover;
+            background: transparent;
+        }
+
+        .layer {
+            position: absolute;
+            inset: 0;
+        }
+
+        #componentsLayer {
+            z-index: 10;
+        }
+
+        #bgLayer {
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        #frameLayer {
+            z-index: 30;
+            pointer-events: none;
+        }
+
+        .layer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .component {
@@ -46,7 +70,11 @@
     </style>
 </head>
 <body>
-    <div id="overlayRoot"></div>
+    <div id="overlayRoot">
+        <div id="bgLayer" class="layer"><img id="bgImage" alt="" /></div>
+        <div id="componentsLayer" class="layer"></div>
+        <div id="frameLayer" class="layer"><img id="frameImage" alt="" /></div>
+    </div>
     
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>

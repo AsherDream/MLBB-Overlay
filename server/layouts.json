@@ -1,10 +1,253 @@
 {
   "default_draft": {
-    "backgroundImage": "",
+    "backgroundImage": "http://localhost:3000/Assets/backgrounds/draft_main.png",
+    "frameImage": "http://localhost:3000/Assets/backgrounds/1771698437263_Draft_Pick_PNG_Greenscreen.png",
     "components": [
-      { "id": "blueTeamName", "x": 50, "y": 50, "width": 300, "height": 40 },
-      { "id": "redTeamName", "x": 1570, "y": 50, "width": 300, "height": 40 },
-      { "id": "bluePick1", "x": 50, "y": 120, "width": 300, "height": 40 }
+      {
+        "id": "blue-team-name",
+        "x": 475,
+        "y": 514,
+        "width": 300,
+        "height": 40
+      },
+      {
+        "id": "blue-score",
+        "x": 413,
+        "y": 50,
+        "width": 80,
+        "height": 40
+      },
+      {
+        "id": "red-team-name",
+        "x": 1142,
+        "y": 560,
+        "width": 300,
+        "height": 40
+      },
+      {
+        "id": "red-score",
+        "x": 1320,
+        "y": 50,
+        "width": 80,
+        "height": 40
+      },
+      {
+        "id": "blue-player-1",
+        "x": 50,
+        "y": 110,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "blue-player-2",
+        "x": 50,
+        "y": 145,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "blue-player-3",
+        "x": 50,
+        "y": 180,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "blue-player-4",
+        "x": 50,
+        "y": 215,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "blue-player-5",
+        "x": 50,
+        "y": 250,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "red-player-1",
+        "x": 1400,
+        "y": 110,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "red-player-2",
+        "x": 1400,
+        "y": 145,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "red-player-3",
+        "x": 1400,
+        "y": 180,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "red-player-4",
+        "x": 1400,
+        "y": 215,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "red-player-5",
+        "x": 1400,
+        "y": 250,
+        "width": 300,
+        "height": 30
+      },
+      {
+        "id": "blue-pick-1",
+        "x": 30,
+        "y": 711,
+        "width": 143,
+        "height": 350
+      },
+      {
+        "id": "blue-pick-2",
+        "x": 186,
+        "y": 714,
+        "width": 151,
+        "height": 341
+      },
+      {
+        "id": "blue-pick-3",
+        "x": 346,
+        "y": 706,
+        "width": 150,
+        "height": 352
+      },
+      {
+        "id": "blue-pick-4",
+        "x": 501,
+        "y": 721,
+        "width": 153,
+        "height": 338
+      },
+      {
+        "id": "blue-pick-5",
+        "x": 657,
+        "y": 718,
+        "width": 159,
+        "height": 338
+      },
+      {
+        "id": "red-pick-1",
+        "x": 1750,
+        "y": 725,
+        "width": 160,
+        "height": 355
+      },
+      {
+        "id": "red-pick-2",
+        "x": 1587,
+        "y": 710,
+        "width": 147,
+        "height": 348
+      },
+      {
+        "id": "red-pick-3",
+        "x": 1425,
+        "y": 718,
+        "width": 151,
+        "height": 343
+      },
+      {
+        "id": "red-pick-4",
+        "x": 1260,
+        "y": 719,
+        "width": 165,
+        "height": 345
+      },
+      {
+        "id": "red-pick-5",
+        "x": 1109,
+        "y": 721,
+        "width": 158,
+        "height": 343
+      },
+      {
+        "id": "blue-ban-1",
+        "x": 28,
+        "y": 598,
+        "width": 138,
+        "height": 60
+      },
+      {
+        "id": "blue-ban-2",
+        "x": 179,
+        "y": 624,
+        "width": 130,
+        "height": 60
+      },
+      {
+        "id": "blue-ban-3",
+        "x": 317,
+        "y": 644,
+        "width": 142,
+        "height": 60
+      },
+      {
+        "id": "blue-ban-4",
+        "x": 22,
+        "y": 524,
+        "width": 142,
+        "height": 60
+      },
+      {
+        "id": "blue-ban-5",
+        "x": 170,
+        "y": 540,
+        "width": 137,
+        "height": 59
+      },
+      {
+        "id": "red-ban-1",
+        "x": 1759,
+        "y": 601,
+        "width": 141,
+        "height": 60
+      },
+      {
+        "id": "red-ban-2",
+        "x": 1625,
+        "y": 621,
+        "width": 130,
+        "height": 60
+      },
+      {
+        "id": "red-ban-3",
+        "x": 1477,
+        "y": 640,
+        "width": 137,
+        "height": 60
+      },
+      {
+        "id": "red-ban-4",
+        "x": 1767,
+        "y": 524,
+        "width": 152,
+        "height": 60
+      },
+      {
+        "id": "red-ban-5",
+        "x": 1622,
+        "y": 545,
+        "width": 140,
+        "height": 60
+      },
+      {
+        "id": "map-slot",
+        "x": 835,
+        "y": 919,
+        "width": 248,
+        "height": 140
+      }
     ]
   }
 }

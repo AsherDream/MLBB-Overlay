@@ -23,19 +23,29 @@ const teamSchema = z.object({
 const matchStateSchema = z.object({
   blueTeam: teamSchema,
   redTeam: teamSchema,
+  map: z.string().default('none'),
+  mapType: z.string().default('none'),
+  activeLayout: z.string().default('default_draft'),
   phase: z.enum(["draft", "game", "ended"]).default("draft")
 });
 
-const layoutComponentSchema = z.object({
+const layoutComponentSchema = z.preprocess((val) => {
+  if (!val || typeof val !== 'object') return val;
+  const v = val;
+  if (typeof v.width !== 'number' && typeof v.w === 'number') v.width = v.w;
+  if (typeof v.height !== 'number' && typeof v.h === 'number') v.height = v.h;
+  return v;
+}, z.object({
   id: z.string().min(1, 'Component id cannot be empty'),
   x: z.number(),
   y: z.number(),
   width: z.number().positive(),
   height: z.number().positive()
-});
+}));
 
 const layoutSchema = z.object({
   backgroundImage: z.string().default(''),
+  frameImage: z.string().default(''),
   components: z.array(layoutComponentSchema).default([])
 });
 

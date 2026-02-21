@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { ArrowLeftRight, RefreshCcw, Shuffle } from 'lucide-react'
 import HeroSearch from './HeroSearch.jsx'
+import BattlefieldSelector from './BattlefieldSelector.jsx'
 
 const SERVER_URL = 'http://localhost:3000'
 
@@ -16,11 +17,23 @@ const DEFAULT_TEAM = {
 const DEFAULT_STATE = {
   blueTeam: JSON.parse(JSON.stringify(DEFAULT_TEAM)),
   redTeam: JSON.parse(JSON.stringify(DEFAULT_TEAM)),
+  map: 'none',
+  mapType: 'none',
   phase: 'draft'
 }
 
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj))
+}
+
+function coerceMap(v) {
+  const s = String(v || 'none').trim()
+  return s.length ? s : 'none'
+}
+
+function coerceMapType(v) {
+  const s = String(v || 'none').trim()
+  return s.length ? s : 'none'
 }
 
 function clampScore(n) {
@@ -118,8 +131,25 @@ export default function ControlPanel() {
   }, [])
 
   function emit(next) {
-    setState(next)
-    socketRef.current?.emit('UPDATE_STATE', next)
+    const s = socketRef.current
+    if (!s) return
+    s.emit('UPDATE_STATE', next)
+  }
+
+  function setMap(nextMap) {
+    setState((prev) => {
+      const next = { ...prev, map: coerceMap(nextMap) }
+      emit(next)
+      return next
+    })
+  }
+
+  function setMapType(nextMapType) {
+    setState((prev) => {
+      const next = { ...prev, mapType: coerceMapType(nextMapType) }
+      emit(next)
+      return next
+    })
   }
 
   function updateTeam(side, updater) {
@@ -132,12 +162,18 @@ export default function ControlPanel() {
     emit(deepClone(DEFAULT_STATE))
   }
 
-  function switchTeams() {
-    const next = deepClone(state)
-    const tmp = next.blueTeam
-    next.blueTeam = next.redTeam
-    next.redTeam = tmp
-    emit(next)
+  function globalSwapTeams() {
+    setState((prev) => {
+      const next = {
+        ...prev,
+        blueTeam: deepClone(prev.redTeam),
+        redTeam: deepClone(prev.blueTeam),
+        map: prev.map,
+        mapType: prev.mapType
+      }
+      emit(next)
+      return next
+    })
   }
 
   function swapPlayers(side, aIdx, bIdx) {
@@ -194,13 +230,19 @@ export default function ControlPanel() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[320px]">
+            <BattlefieldSelector value={state.mapType || 'none'} onChange={setMapType} />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
           <CompactButton icon={RefreshCcw} onClick={resetAll} variant="ghost">
             RESET
           </CompactButton>
-          <CompactButton icon={Shuffle} onClick={switchTeams}>
+          <CompactButton icon={Shuffle} onClick={globalSwapTeams}>
             GLOBAL SWAP
           </CompactButton>
+          </div>
         </div>
       </div>
 

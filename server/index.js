@@ -1,11 +1,24 @@
 const express = require('express');
+const cors = require('cors');
+const os = require('os');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 const { matchStateSchema, layoutSchema } = require('./validators/schema');
 
 const app = express();
+
+app.use(cors({
+  origin: "http://localhost:5173", // Your Hub's address
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -47,6 +60,76 @@ function saveLayouts() {
   }
 }
 
+function ensureDir(dirPath) {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true });
+  } catch {
+    // ignore
+  }
+}
+
+const serverAssetsRoot = path.join(__dirname, 'public/Assets');
+const backgroundsDir = path.join(serverAssetsRoot, 'backgrounds');
+const logosDir = path.join(serverAssetsRoot, 'logos');
+const mapsDir = path.join(serverAssetsRoot, 'Maps');
+
+ensureDir(backgroundsDir);
+ensureDir(logosDir);
+ensureDir(mapsDir);
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const kind = req.params.kind;
+      if (kind === 'backgrounds') return cb(null, backgroundsDir);
+      if (kind === 'logos') return cb(null, logosDir);
+      if (kind === 'Maps' || kind === 'maps') return cb(null, mapsDir);
+      return cb(new Error('Invalid upload kind'));
+    },
+    filename: (req, file, cb) => {
+      const safeName = (file.originalname || 'upload')
+        .replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}_${safeName}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+
+app.post('/api/uploads/:kind', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const kind = req.params.kind;
+    const urlKind = kind === 'maps' ? 'Maps' : kind;
+    const rel = `/assets/${urlKind}/${req.file.filename}`;
+    return res.json({ ok: true, url: rel, filename: req.file.filename });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+const bgUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, backgroundsDir),
+    filename: (req, file, cb) => {
+      const safeName = (file.originalname || 'upload')
+        .replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}_${safeName}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+
+// V2 contract: POST /api/upload (backgrounds only)
+app.post('/api/upload', bgUpload.single('file'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const rel = `/Assets/backgrounds/${req.file.filename}`;
+    return res.json({ ok: true, url: rel, filename: req.file.filename });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/layouts', (req, res) => {
   res.json({ layouts });
 });
@@ -56,6 +139,36 @@ app.get('/api/layouts/:id', (req, res) => {
   const layout = layouts[id];
   if (!layout) return res.status(404).json({ error: 'Layout not found' });
   return res.json({ id, layout });
+});
+
+app.get('/api/backgrounds', (req, res) => {
+  try {
+    if (!fs.existsSync(backgroundsDir)) return res.json({ backgrounds: [] });
+    const files = fs
+      .readdirSync(backgroundsDir, { withFileTypes: true })
+      .filter((d) => d.isFile())
+      .map((d) => d.name)
+      .filter((name) => !name.startsWith('.'));
+    return res.json({ backgrounds: files });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/active-layout', (req, res) => {
+  try {
+    const id = String(req.body?.id || '').trim();
+    if (!id) return res.status(400).json({ error: 'Missing id' });
+    if (!layouts[id]) return res.status(404).json({ error: 'Layout not found' });
+
+    matchState = matchStateSchema.parse({ ...matchState, activeLayout: id });
+    saveState();
+    io.emit('STATE_SYNC', matchState);
+    io.emit('ACTIVE_LAYOUT_CHANGED', { id });
+    return res.json({ ok: true, id });
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
 });
 
 app.put('/api/layouts/:id', (req, res) => {
@@ -70,20 +183,63 @@ app.put('/api/layouts/:id', (req, res) => {
   }
 });
 
+app.post('/api/layouts', (req, res) => {
+  try {
+    const body = req.body;
+
+    // Accept either:
+    // 1) { layouts: { [id]: layout } }
+    // 2) { [id]: layout }
+    // 3) { id: string, layout: layout }
+    let nextLayouts = null;
+
+    if (body && typeof body === 'object' && body.layouts && typeof body.layouts === 'object') {
+      nextLayouts = body.layouts;
+    } else if (body && typeof body === 'object' && typeof body.id === 'string' && body.layout) {
+      nextLayouts = { ...layouts, [body.id]: layoutSchema.parse(body.layout) };
+    } else if (body && typeof body === 'object' && typeof body.id === 'string' && body.components) {
+      const { id, ...layout } = body;
+      nextLayouts = { ...layouts, [id]: layoutSchema.parse(layout) };
+    } else if (body && typeof body === 'object') {
+      nextLayouts = body;
+    }
+
+    if (!nextLayouts || typeof nextLayouts !== 'object') {
+      return res.status(400).json({ error: 'Invalid layouts payload' });
+    }
+
+    const validatedAll = {};
+    for (const [id, layout] of Object.entries(nextLayouts)) {
+      validatedAll[id] = layoutSchema.parse(layout);
+    }
+
+    layouts = validatedAll;
+    saveLayouts();
+    return res.json({ ok: true, layouts });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 // Initialize default match state
 let matchState = {
   blueTeam: {
     name: "Blue Team",
     score: 0,
+    players: [{ name: '' }, { name: '' }, { name: '' }, { name: '' }, { name: '' }],
     picks: ["none", "none", "none", "none", "none"],
     bans: ["none", "none", "none", "none", "none"]
   },
   redTeam: {
     name: "Red Team", 
     score: 0,
+    players: [{ name: '' }, { name: '' }, { name: '' }, { name: '' }, { name: '' }],
     picks: ["none", "none", "none", "none", "none"],
     bans: ["none", "none", "none", "none", "none"]
   },
+  map: "none",
+  mapType: "none",
+  activeLayout: "default_draft",
   phase: "draft"
 };
 
@@ -119,6 +275,19 @@ const overlayPath = path.join(__dirname, '../overlay');
 app.use('/overlay', express.static(overlayPath));
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 
+// Server-managed assets (uploads)
+app.use('/assets', express.static(serverAssetsRoot));
+
+// V2: Capital-A Assets path for overlays/layouts
+app.use('/Assets', express.static(serverAssetsRoot));
+
+// Serve Hub assets for overlay thumbnails (HeroPick)
+const hubAssetsPath = path.join(__dirname, '../hub/public/Assets');
+if (fs.existsSync(hubAssetsPath)) {
+  app.use('/assets', express.static(hubAssetsPath));
+  app.use('/Assets', express.static(hubAssetsPath));
+}
+
 const hubDistPath = path.join(__dirname, '../hub/dist');
 if (fs.existsSync(hubDistPath)) {
   app.use(express.static(hubDistPath));
@@ -149,6 +318,20 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Invalid state update:', error.message);
       socket.emit('STATE_ERROR', error.message);
+    }
+  });
+
+  socket.on('SET_ACTIVE_LAYOUT', (payload) => {
+    try {
+      const id = String(payload?.id || payload || '').trim();
+      if (!id) throw new Error('Missing id');
+      if (!layouts[id]) throw new Error('Layout not found');
+      matchState = matchStateSchema.parse({ ...matchState, activeLayout: id });
+      saveState();
+      io.emit('STATE_SYNC', matchState);
+      io.emit('ACTIVE_LAYOUT_CHANGED', { id });
+    } catch (e) {
+      socket.emit('STATE_ERROR', e.message);
     }
   });
   

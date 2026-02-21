@@ -1,13 +1,13 @@
 {
   "blueTeam": {
-    "name": "Blue LIVE",
+    "name": "Renergy",
     "score": 3,
     "players": [
       {
-        "name": "Asher"
+        "name": "Austen"
       },
       {
-        "name": "Ben"
+        "name": "Asher"
       },
       {
         "name": "Peter"
@@ -16,18 +16,18 @@
         "name": "Allen"
       },
       {
-        "name": "Andrew"
+        "name": "Ben"
       }
     ],
     "picks": [
-      "Ling",
+      "ling",
       "akai",
-      "none",
-      "none",
-      "none"
+      "aamon",
+      "miya",
+      "cyclops"
     ],
     "bans": [
-      "none",
+      "freya",
       "none",
       "none",
       "none",
@@ -35,31 +35,31 @@
     ]
   },
   "redTeam": {
-    "name": "Red LIVE",
+    "name": "Eagle",
     "score": 0,
     "players": [
       {
-        "name": ""
+        "name": "WHy"
       },
       {
-        "name": ""
+        "name": "Amaris"
       },
       {
-        "name": ""
+        "name": "Sky"
       },
       {
-        "name": ""
+        "name": "Andre"
       },
       {
-        "name": ""
+        "name": "Asma"
       }
     ],
     "picks": [
       "roger",
-      "none",
-      "none",
-      "none",
-      "none"
+      "argus",
+      "yin",
+      "yisunshin",
+      "alpha"
     ],
     "bans": [
       "none",
@@ -69,5 +69,8 @@
       "none"
     ]
   },
+  "map": "none",
+  "mapType": "broken_walls",
+  "activeLayout": "default_draft",
   "phase": "draft"
 }

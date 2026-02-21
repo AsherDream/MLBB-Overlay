@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Copy, LayoutDashboard, PanelsTopLeft, ScreenShare, Settings, Signal } from 'lucide-react'
+import { Copy, LayoutDashboard, LayoutTemplate, PanelsTopLeft, PencilRuler, ScreenShare, Settings, Signal } from 'lucide-react'
 
 function cx(...classes) {
   return classes.filter(Boolean).join(' ')
@@ -43,6 +43,8 @@ export default function Sidebar({ serverAddress = '192.168.1.190:3000', onCopySe
         <nav className="mt-6 flex flex-col gap-1">
           <NavItem to="/" icon={LayoutDashboard} label="DASHBOARD" />
           <NavItem to="/control" icon={Settings} label="CONTROL PANEL" />
+          <NavItem to="/layouts" icon={LayoutTemplate} label="LAYOUT MANAGER" />
+          <NavItem to="/draw/default_draft" icon={PencilRuler} label="DRAW CONTROL" />
           <NavItem to="/display" icon={ScreenShare} label="DISPLAY OVERLAY" />
         </nav>
 
