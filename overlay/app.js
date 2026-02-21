@@ -57,6 +57,75 @@ function applyStateToLayout(state) {
     });
 }
 
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+}
+
+function setImage(id, src) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'IMG') {
+        el.src = src;
+        return;
+    }
+    const img = el.querySelector('img');
+    if (img) img.src = src;
+}
+
+function heroThumb(hero) {
+    if (!hero || hero === 'none') return '/assets/HeroPick/idle.png';
+    const safe = String(hero).toLowerCase();
+    return `/assets/HeroPick/${safe}.png`;
+}
+
+function updateOverlay(data) {
+    // Text IDs (support both camelCase and kebab-case)
+    setText('blueTeamName', data?.blueTeam?.name || '');
+    setText('blue-team-name', data?.blueTeam?.name || '');
+    setText('redTeamName', data?.redTeam?.name || '');
+    setText('red-team-name', data?.redTeam?.name || '');
+
+    setText('blueScore', String(data?.blueTeam?.score ?? ''));
+    setText('blue-score', String(data?.blueTeam?.score ?? ''));
+    setText('redScore', String(data?.redTeam?.score ?? ''));
+    setText('red-score', String(data?.redTeam?.score ?? ''));
+
+    // Common pick/ban slots (1..5)
+    for (let i = 0; i < 5; i++) {
+        const idx = i + 1;
+        const bp = data?.blueTeam?.picks?.[i] || 'none';
+        const rp = data?.redTeam?.picks?.[i] || 'none';
+        const bb = data?.blueTeam?.bans?.[i] || 'none';
+        const rb = data?.redTeam?.bans?.[i] || 'none';
+
+        setText(`bluePick${idx}`, bp);
+        setText(`blue-pick-${idx}`, bp);
+        setText(`redPick${idx}`, rp);
+        setText(`red-pick-${idx}`, rp);
+
+        setText(`blueBan${idx}`, bb);
+        setText(`blue-ban-${idx}`, bb);
+        setText(`redBan${idx}`, rb);
+        setText(`red-ban-${idx}`, rb);
+
+        // If your layout uses <img> elements with these ids, update the images too
+        setImage(`bluePickImg${idx}`, heroThumb(bp));
+        setImage(`blue-pick-img-${idx}`, heroThumb(bp));
+        setImage(`redPickImg${idx}`, heroThumb(rp));
+        setImage(`red-pick-img-${idx}`, heroThumb(rp));
+
+        setImage(`blueBanImg${idx}`, heroThumb(bb));
+        setImage(`blue-ban-img-${idx}`, heroThumb(bb));
+        setImage(`redBanImg${idx}`, heroThumb(rb));
+        setImage(`red-ban-img-${idx}`, heroThumb(rb));
+    }
+
+    // Always keep the dynamic layout update too
+    applyStateToLayout(data);
+}
+
 async function bootstrap() {
     const layoutId = getLayoutId();
     console.log('Overlay boot: layoutId=', layoutId);
@@ -72,14 +141,15 @@ async function bootstrap() {
         return;
     }
 
-    const socket = io();
+    const socket = io('http://localhost:3000');
 
     socket.on('connect', () => {
         console.log('Connected to MLBB State Server');
     });
 
-    socket.on('STATE_SYNC', (state) => {
-        applyStateToLayout(state);
+    socket.on('STATE_SYNC', (data) => {
+        console.log('Data Received:', data);
+        updateOverlay(data);
     });
 
     socket.on('STATE_ERROR', (error) => {

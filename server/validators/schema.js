@@ -2,9 +2,20 @@ const { z } = require('zod');
 
 const heroSchema = z.string().min(1, "Hero name cannot be empty");
 
+const playerSchema = z.object({
+  name: z.string().default('')
+});
+
 const teamSchema = z.object({
   name: z.string().min(1, "Team name cannot be empty"),
   score: z.number().int().min(0).default(0),
+  players: z.array(playerSchema).length(5).default([
+    { name: '' },
+    { name: '' },
+    { name: '' },
+    { name: '' },
+    { name: '' }
+  ]),
   picks: z.array(heroSchema).length(5).default(["none", "none", "none", "none", "none"]),
   bans: z.array(heroSchema).length(5).default(["none", "none", "none", "none", "none"])
 });
@@ -32,6 +43,7 @@ module.exports = {
   matchStateSchema,
   teamSchema,
   heroSchema,
+  playerSchema,
   layoutSchema,
   layoutComponentSchema
 };

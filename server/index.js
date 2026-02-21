@@ -136,7 +136,7 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   
   // Send current state to newly connected client
-  socket.emit('STATE_SYNC', matchState);
+  io.emit('STATE_SYNC', matchState);
   
   // Handle state updates
   socket.on('UPDATE_STATE', (newState) => {

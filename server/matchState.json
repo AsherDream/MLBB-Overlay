@@ -1,0 +1,73 @@
+{
+  "blueTeam": {
+    "name": "Blue LIVE",
+    "score": 3,
+    "players": [
+      {
+        "name": "Asher"
+      },
+      {
+        "name": "Ben"
+      },
+      {
+        "name": "Peter"
+      },
+      {
+        "name": "Allen"
+      },
+      {
+        "name": "Andrew"
+      }
+    ],
+    "picks": [
+      "Ling",
+      "akai",
+      "none",
+      "none",
+      "none"
+    ],
+    "bans": [
+      "none",
+      "none",
+      "none",
+      "none",
+      "none"
+    ]
+  },
+  "redTeam": {
+    "name": "Red LIVE",
+    "score": 0,
+    "players": [
+      {
+        "name": ""
+      },
+      {
+        "name": ""
+      },
+      {
+        "name": ""
+      },
+      {
+        "name": ""
+      },
+      {
+        "name": ""
+      }
+    ],
+    "picks": [
+      "roger",
+      "none",
+      "none",
+      "none",
+      "none"
+    ],
+    "bans": [
+      "none",
+      "none",
+      "none",
+      "none",
+      "none"
+    ]
+  },
+  "phase": "draft"
+}
