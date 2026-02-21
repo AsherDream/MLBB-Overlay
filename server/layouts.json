@@ -1,0 +1,10 @@
+{
+  "default_draft": {
+    "backgroundImage": "",
+    "components": [
+      { "id": "blueTeamName", "x": 50, "y": 50, "width": 300, "height": 40 },
+      { "id": "redTeamName", "x": 1570, "y": 50, "width": 300, "height": 40 },
+      { "id": "bluePick1", "x": 50, "y": 120, "width": 300, "height": 40 }
+    ]
+  }
+}
