@@ -7,6 +7,13 @@ const lastValues = new Map();
 let currentLayoutId = null;
 let lastState = null;
 
+const TRANSPARENT_PX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X6nVsAAAAASUVORK5CYII=';
+
+function isImageId(componentId) {
+    const id = String(componentId || '').toLowerCase();
+    return id.includes('pick') || id.includes('ban') || id.includes('logo') || id.includes('map');
+}
+
 function getLayoutId() {
     const params = new URLSearchParams(window.location.search);
     return params.get('id') || 'default_draft';
@@ -38,9 +45,8 @@ function ensureComponentEl(componentId, component) {
         el.className = 'component';
 
         // If this looks like an image slot, mount an <img> inside
-        const id = String(componentId).toLowerCase();
-        const wantsImg = id.includes('pick') || id.includes('ban') || id.includes('map');
-        if (wantsImg || component.type === 'image') {
+        const wantsImg = isImageId(componentId);
+        if (wantsImg) {
             const img = document.createElement('img');
             img.alt = '';
             el.appendChild(img);
@@ -51,8 +57,8 @@ function ensureComponentEl(componentId, component) {
         (componentsLayer || overlayRoot).appendChild(el);
     }
 
-    // If the component type changes between text/image, reconcile DOM.
-    const wantsImg = component?.type === 'image';
+    // Priority mapping: id-based image detection always wins.
+    const wantsImg = isImageId(componentId);
     const hasImg = !!el.querySelector('img');
     if (wantsImg && !hasImg) {
         const img = document.createElement('img');
@@ -65,10 +71,12 @@ function ensureComponentEl(componentId, component) {
         el.classList.add('text');
     }
 
+    const w = typeof component?.width === 'number' ? component.width : (typeof component?.w === 'number' ? component.w : 0);
+    const h = typeof component?.height === 'number' ? component.height : (typeof component?.h === 'number' ? component.h : 0);
     el.style.left = `${component.x}px`;
     el.style.top = `${component.y}px`;
-    el.style.width = `${component.width}px`;
-    el.style.height = `${component.height}px`;
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
 
     // Production visibility toggle: hide entirely on overlay
     el.style.display = component?.visible === false ? 'none' : 'block';
@@ -99,13 +107,13 @@ function applyLayoutInPlace(layout) {
 }
 
 function mapThumb(mapName) {
-    if (!mapName || mapName === 'none') return '/Assets/Map/idle.png';
+    if (!mapName || mapName === 'none') return TRANSPARENT_PX;
     const safe = String(mapName).toLowerCase();
-    return `/Assets/Map/${safe}.png`;
+    return `/Assets/Maps/${safe}.png`;
 }
 
 function heroThumb(hero) {
-    if (!hero || hero === 'none') return '/Assets/HeroPick/idle.png';
+    if (!hero || hero === 'none') return TRANSPARENT_PX;
     const safe = String(hero).toLowerCase();
     return `/Assets/HeroPick/${safe}.png`;
 }
@@ -145,13 +153,21 @@ function setImageIfExists(id, src, shouldShow) {
         img.src = nextSrc;
         lastValues.set(srcKey, nextSrc);
     }
+
+    // Priority styling: bans are desaturated/dimmed.
+    const wantsBanFilter = String(id || '').toLowerCase().includes('ban');
+    const nextFilter = wantsBanFilter ? 'grayscale(100%) brightness(50%)' : '';
+    const filterKey = `${id}::filter`;
+    if (lastValues.get(filterKey) !== nextFilter) {
+        img.style.filter = nextFilter;
+        lastValues.set(filterKey, nextFilter);
+    }
 }
 
 function updateOverlay(state) {
     // Map syncing (mapType preferred)
     const mapType = state?.mapType || state?.map || 'none';
-    const showMap = mapType && mapType !== 'none';
-    setImageIfExists('map-slot', mapThumb(mapType), showMap);
+    setImageIfExists('map-slot', mapThumb(mapType), true);
 
     // Hero picks & bans (1..5)
     for (let i = 0; i < 5; i++) {
@@ -162,10 +178,10 @@ function updateOverlay(state) {
         const bb = state?.blueTeam?.bans?.[i] || 'none';
         const rb = state?.redTeam?.bans?.[i] || 'none';
 
-        setImageIfExists(`blue-pick-${idx}`, heroThumb(bp), bp !== 'none');
-        setImageIfExists(`red-pick-${idx}`, heroThumb(rp), rp !== 'none');
-        setImageIfExists(`blue-ban-${idx}`, heroThumb(bb), bb !== 'none');
-        setImageIfExists(`red-ban-${idx}`, heroThumb(rb), rb !== 'none');
+        setImageIfExists(`blue-pick-${idx}`, heroThumb(bp), true);
+        setImageIfExists(`red-pick-${idx}`, heroThumb(rp), true);
+        setImageIfExists(`blue-ban-${idx}`, heroThumb(bb), true);
+        setImageIfExists(`red-ban-${idx}`, heroThumb(rb), true);
     }
 
     // Text fields

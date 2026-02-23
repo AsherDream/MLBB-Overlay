@@ -51,6 +51,6 @@
   },
   "map": "none",
   "mapType": "expanding_rivers",
-  "activeLayout": "default_draft",
+  "activeLayout": "Testing",
   "phase": "draft"
 }

@@ -8,6 +8,9 @@ const SERVER_URL = 'http://localhost:3000'
 const BASE_W = 1920
 const BASE_H = 1080
 
+const TRANSPARENT_PX =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X6nVsAAAAASUVORK5CYII='
+
 const DEFAULT_COMPONENT_IDS = ['map-type-icon']
 
 function inferTypeFromId(id) {
@@ -72,7 +75,7 @@ function getAssetUrlFromId(id, state) {
   const s = String(id || '').toLowerCase()
   if (s.includes('map')) {
     const mapType = state?.mapType || state?.map || 'none'
-    if (!mapType || mapType === 'none') return '/Assets/Maps/idle.png'
+    if (!mapType || mapType === 'none') return TRANSPARENT_PX
     return `/Assets/Maps/${String(mapType).toLowerCase()}.png`
   }
   if (s.includes('pick-')) {
@@ -81,7 +84,7 @@ function getAssetUrlFromId(id, state) {
     const team = m[1]
     const idx = Number(m[2]) - 1
     const hero = team === 'blue' ? state?.blueTeam?.picks?.[idx] : state?.redTeam?.picks?.[idx]
-    if (!hero || hero === 'none') return '/Assets/HeroPick/idle.png'
+    if (!hero || hero === 'none') return TRANSPARENT_PX
     return `/Assets/HeroPick/${String(hero).toLowerCase()}.png`
   }
   if (s.includes('ban-')) {
@@ -90,7 +93,7 @@ function getAssetUrlFromId(id, state) {
     const team = m[1]
     const idx = Number(m[2]) - 1
     const hero = team === 'blue' ? state?.blueTeam?.bans?.[idx] : state?.redTeam?.bans?.[idx]
-    if (!hero || hero === 'none') return '/Assets/HeroPick/idle.png'
+    if (!hero || hero === 'none') return TRANSPARENT_PX
     return `/Assets/HeroPick/${String(hero).toLowerCase()}.png`
   }
   return ''
@@ -123,7 +126,8 @@ function SmartBox({ box, matchState }) {
   const text = shouldRenderImage ? '' : getTextFromId(id, matchState)
 
   if (shouldRenderImage) {
-    const fallback = toServerUrl('/Assets/HeroPick/idle.png')
+    const fallback = TRANSPARENT_PX
+    const isBan = String(id || '').toLowerCase().includes('ban')
     return (
       <img
         src={imgSrc}
@@ -137,6 +141,7 @@ function SmartBox({ box, matchState }) {
           }
         }}
         className="pointer-events-none h-full w-full select-none object-contain"
+        style={{ filter: isBan ? 'grayscale(100%) brightness(50%)' : undefined }}
       />
     )
   }
@@ -420,7 +425,7 @@ export default function DrawControl() {
     const ro = new ResizeObserver(() => {
       const rect = el.getBoundingClientRect()
       const s = Math.min(rect.width / BASE_W, rect.height / BASE_H)
-      setScale(clamp(s || 1, 0.1, 1))
+      setScale(clamp(s || 1, 0.1, 0.45))
     })
 
     ro.observe(el)
@@ -684,73 +689,83 @@ export default function DrawControl() {
               }}
               onMouseDown={() => setSelectedId(null)}
             >
-            {background ? (
-              <img
-                src={background}
-                alt=""
-                draggable={false}
-                className="pointer-events-none absolute inset-0 z-[1] h-full w-full select-none object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 z-[1] bg-gradient-to-br from-white/5 to-white/0" />
-            )}
+              <div id="bg-layer" className="absolute inset-0" style={{ zIndex: 1 }}>
+                {background ? (
+                  <img
+                    src={background}
+                    alt=""
+                    draggable={false}
+                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0" />
+                )}
+              </div>
 
-            {sortedBoxes.map((b) => {
-              const isSelected = b.id === selectedId
-              const z = 10 + clampInt(b.zIndex ?? 0, 0, 500)
-              return (
-                <Rnd
-                  key={b.id}
-                  bounds="parent"
-                  size={{ width: b.w, height: b.h }}
-                  position={{ x: b.x, y: b.y }}
-                  scale={scale}
-                  disableDragging={!!b.locked}
-                  enableResizing={!b.locked}
-                  onMouseDown={(e) => {
-                    e.stopPropagation()
-                    setSelectedId(b.id)
-                  }}
-                  onDragStop={(e, d) => {
-                    const nx = snap(d.x, 5)
-                    const ny = snap(d.y, 5)
-                    setBoxes((prev) =>
-                      prev.map((p) => (p.id === b.id ? { ...p, x: nx, y: ny } : p))
-                    )
-                  }}
-                  onResizeStop={(e, dir, ref, delta, pos) => {
-                    const w = snap(ref.offsetWidth, 5)
-                    const h = snap(ref.offsetHeight, 5)
-                    const x = snap(pos.x, 5)
-                    const y = snap(pos.y, 5)
-                    setBoxes((prev) =>
-                      prev.map((p) => (p.id === b.id ? { ...p, x, y, w, h } : p))
-                    )
-                  }}
-                  style={{
-                    zIndex: z,
-                    opacity: b.visible ? 1 : 0
-                  }}
-                >
-                  <div
-                    className={`h-full w-full overflow-hidden rounded-lg border ${
-                      isSelected ? 'border-[#a78bfa]' : 'border-white/10'
-                    } bg-[#1a1625]/70`}
-                  >
-                    <SmartBox box={b} matchState={matchState} />
-                  </div>
-                </Rnd>
-              )
-            })}
+              <div id="component-layer" className="absolute inset-0" style={{ zIndex: 10 }}>
+                {sortedBoxes.map((b) => {
+                  const isSelected = b.id === selectedId
+                  const z = 1 + clampInt(b.zIndex ?? 0, 0, 500)
+                  return (
+                    <Rnd
+                      key={b.id}
+                      bounds="parent"
+                      size={{ width: b.w, height: b.h }}
+                      position={{ x: b.x, y: b.y }}
+                      scale={scale}
+                      disableDragging={!!b.locked}
+                      enableResizing={!b.locked}
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                        setSelectedId(b.id)
+                      }}
+                      onDragStop={(e, d) => {
+                        const nx = snap(d.x, 5)
+                        const ny = snap(d.y, 5)
+                        setBoxes((prev) =>
+                          prev.map((p) => (p.id === b.id ? { ...p, x: nx, y: ny } : p))
+                        )
+                      }}
+                      onResizeStop={(e, dir, ref, delta, pos) => {
+                        const w = snap(ref.offsetWidth, 5)
+                        const h = snap(ref.offsetHeight, 5)
+                        const x = snap(pos.x, 5)
+                        const y = snap(pos.y, 5)
+                        setBoxes((prev) =>
+                          prev.map((p) => (p.id === b.id ? { ...p, x, y, w, h } : p))
+                        )
+                      }}
+                      style={{
+                        zIndex: z,
+                        opacity: b.visible ? 1 : 0
+                      }}
+                    >
+                      <div
+                        className={`h-full w-full overflow-hidden rounded-lg border ${
+                          isSelected ? 'border-[#a78bfa]' : 'border-white/10'
+                        } bg-[#1a1625]/70`}
+                      >
+                        <SmartBox box={b} matchState={matchState} />
+                      </div>
+                    </Rnd>
+                  )
+                })}
+              </div>
 
-            {frame ? (
-              <img
-                src={frame}
-                alt=""
-                draggable={false}
-                className="pointer-events-none absolute inset-0 z-[100] h-full w-full select-none object-cover"
-              />
-            ) : null}
+              <div
+                id="frame-layer"
+                className="absolute inset-0 pointer-events-none"
+                style={{ zIndex: 100 }}
+              >
+                {frame ? (
+                  <img
+                    src={frame}
+                    alt=""
+                    draggable={false}
+                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                  />
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
