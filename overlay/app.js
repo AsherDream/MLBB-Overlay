@@ -1,4 +1,5 @@
 const overlayRoot = document.getElementById('overlayRoot');
+const overlayFit = document.getElementById('overlayFit');
 const componentsLayer = document.getElementById('componentsLayer');
 const bgImageEl = document.getElementById('bgImage');
 const frameImageEl = document.getElementById('frameImage');
@@ -7,11 +8,111 @@ const lastValues = new Map();
 let currentLayoutId = null;
 let lastState = null;
 
+let previousState = null;
+
+let volumeSettings = {
+    enabled: true,
+    master: 1,
+    pick: 1,
+    ban: 0.6
+};
+
+const SERVER_URL = 'http://localhost:3000';
+
 const TRANSPARENT_PX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X6nVsAAAAASUVORK5CYII=';
 
 function isImageId(componentId) {
     const id = String(componentId || '').toLowerCase();
     return id.includes('pick') || id.includes('ban') || id.includes('logo') || id.includes('map');
+}
+
+function clamp01(n, fallback) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return fallback;
+    return Math.max(0, Math.min(1, x));
+}
+
+async function audioExists(url) {
+    try {
+        const res = await fetch(url, { method: 'HEAD' });
+        return !!res.ok;
+    } catch {
+        return false;
+    }
+}
+
+async function playVoiceLine(heroName, { baseVolume = 1, playbackRate = 1 } = {}) {
+    try {
+        if (!volumeSettings.enabled) return;
+        const name = String(heroName || '').trim();
+        if (!name || name === 'none') return;
+        const safe = name.toLowerCase();
+        const url = `${SERVER_URL}/Assets/VoiceLines/${safe}.ogg`;
+
+        const ok = await audioExists(url);
+        if (!ok) {
+            console.warn('Missing Audio File:', name);
+            return;
+        }
+
+        const audio = new Audio(url);
+        audio.volume = clamp01(volumeSettings.master, 1) * clamp01(baseVolume, 1);
+        audio.playbackRate = Number.isFinite(playbackRate) ? playbackRate : 1;
+        audio.onerror = () => {
+            // Missing voiceline -> ignore.
+        };
+        audio.play().catch(() => {
+            // Autoplay restrictions / decode errors -> ignore.
+        });
+    } catch {
+        // ignore
+    }
+}
+
+async function playBanSequence(heroName) {
+    try {
+        if (!volumeSettings.enabled) return;
+        const name = String(heroName || '').trim();
+        if (!name || name === 'none') return;
+
+        const slamUrl = `${SERVER_URL}/Assets/Sfx/ban_slam.mp3`;
+        const hasSlam = await audioExists(slamUrl);
+        if (!hasSlam) {
+            console.warn('Missing Audio File:', 'ban_slam');
+        }
+
+        const slamSfx = new Audio(slamUrl);
+        slamSfx.volume = clamp01(volumeSettings.master, 1) * 0.8;
+        slamSfx.onerror = () => {
+            // ignore
+        };
+        slamSfx.play().catch(() => {
+            // ignore
+        });
+
+        window.setTimeout(() => {
+            playVoiceLine(name, {
+                baseVolume: clamp01(volumeSettings.ban, 0.6),
+                playbackRate: 0.9
+            });
+        }, 200);
+    } catch {
+        // ignore
+    }
+}
+
+function triggerBanEntry(slotId) {
+    try {
+        const el = document.getElementById(slotId);
+        if (!el) return;
+        el.classList.remove('ban-entry');
+        // eslint-disable-next-line no-unused-expressions
+        el.offsetWidth;
+        el.classList.add('ban-entry');
+        window.setTimeout(() => el.classList.remove('ban-entry'), 250);
+    } catch {
+        // ignore
+    }
 }
 
 function getLayoutId() {
@@ -42,7 +143,7 @@ function ensureComponentEl(componentId, component) {
     if (!el) {
         el = document.createElement('div');
         el.id = componentId;
-        el.className = 'component';
+        el.className = 'component component-fade-in';
 
         // If this looks like an image slot, mount an <img> inside
         const wantsImg = isImageId(componentId);
@@ -73,10 +174,22 @@ function ensureComponentEl(componentId, component) {
 
     const w = typeof component?.width === 'number' ? component.width : (typeof component?.w === 'number' ? component.w : 0);
     const h = typeof component?.height === 'number' ? component.height : (typeof component?.h === 'number' ? component.h : 0);
+
+    // Diagnostics: verify 1:1 mapping with layouts.json.
+    try {
+        console.log('Rendering ID:', componentId, 'at X:', component?.x, 'Y:', component?.y);
+    } catch {
+        // ignore
+    }
+
     el.style.left = `${component.x}px`;
     el.style.top = `${component.y}px`;
     el.style.width = `${w}px`;
     el.style.height = `${h}px`;
+
+    // Ban visual container styling.
+    const isBan = String(componentId || '').toLowerCase().includes('ban');
+    el.classList.toggle('smartbox-ban', isBan);
 
     // Production visibility toggle: hide entirely on overlay
     el.style.display = component?.visible === false ? 'none' : 'block';
@@ -109,13 +222,13 @@ function applyLayoutInPlace(layout) {
 function mapThumb(mapName) {
     if (!mapName || mapName === 'none') return TRANSPARENT_PX;
     const safe = String(mapName).toLowerCase();
-    return `/Assets/Maps/${safe}.png`;
+    return `${SERVER_URL}/Assets/Maps/${safe}.png`;
 }
 
 function heroThumb(hero) {
     if (!hero || hero === 'none') return TRANSPARENT_PX;
     const safe = String(hero).toLowerCase();
-    return `/Assets/HeroPick/${safe}.png`;
+    return `${SERVER_URL}/Assets/HeroPick/${safe}.png`;
 }
 
 function getImgTarget(id) {
@@ -152,6 +265,21 @@ function setImageIfExists(id, src, shouldShow) {
     if (lastValues.get(srcKey) !== nextSrc) {
         img.src = nextSrc;
         lastValues.set(srcKey, nextSrc);
+
+        // Trigger an entry animation when portrait changes.
+        try {
+            img.classList.remove('img-flash');
+            img.classList.remove('img-pop');
+            // eslint-disable-next-line no-unused-expressions
+            img.offsetWidth;
+            img.classList.add(nextSrc && nextSrc !== TRANSPARENT_PX ? 'img-pop' : 'img-flash');
+            window.setTimeout(() => {
+                img.classList.remove('img-flash');
+                img.classList.remove('img-pop');
+            }, 300);
+        } catch {
+            // ignore
+        }
     }
 
     // Priority styling: bans are desaturated/dimmed.
@@ -164,7 +292,9 @@ function setImageIfExists(id, src, shouldShow) {
     }
 }
 
-function updateOverlay(state) {
+function renderOverlay(state) {
+    const prev = previousState;
+
     // Map syncing (mapType preferred)
     const mapType = state?.mapType || state?.map || 'none';
     setImageIfExists('map-slot', mapThumb(mapType), true);
@@ -182,6 +312,27 @@ function updateOverlay(state) {
         setImageIfExists(`red-pick-${idx}`, heroThumb(rp), true);
         setImageIfExists(`blue-ban-${idx}`, heroThumb(bb), true);
         setImageIfExists(`red-ban-${idx}`, heroThumb(rb), true);
+
+        // Audio triggers + ban entry animation on transitions none -> hero.
+        const prevBp = prev?.blueTeam?.picks?.[i] || 'none';
+        const prevRp = prev?.redTeam?.picks?.[i] || 'none';
+        const prevBb = prev?.blueTeam?.bans?.[i] || 'none';
+        const prevRb = prev?.redTeam?.bans?.[i] || 'none';
+
+        if (prevBp === 'none' && bp !== 'none') {
+            playVoiceLine(bp, { baseVolume: clamp01(volumeSettings.pick, 1), playbackRate: 1 });
+        }
+        if (prevRp === 'none' && rp !== 'none') {
+            playVoiceLine(rp, { baseVolume: clamp01(volumeSettings.pick, 1), playbackRate: 1 });
+        }
+        if (prevBb === 'none' && bb !== 'none') {
+            triggerBanEntry(`blue-ban-${idx}`);
+            playBanSequence(bb);
+        }
+        if (prevRb === 'none' && rb !== 'none') {
+            triggerBanEntry(`red-ban-${idx}`);
+            playBanSequence(rb);
+        }
     }
 
     // Text fields
@@ -195,12 +346,31 @@ function updateOverlay(state) {
         setTextIfExists(`blue-player-${idx}`, state?.blueTeam?.players?.[i] || '');
         setTextIfExists(`red-player-${idx}`, state?.redTeam?.players?.[i] || '');
     }
+
+    previousState = state;
+}
+
+function applyOverlayScale() {
+    try {
+        if (!overlayFit) return;
+        const vw = window.innerWidth || 1920;
+        const vh = window.innerHeight || 1080;
+        const s = Math.min(vw / 1920, vh / 1080);
+
+        overlayFit.style.transformOrigin = 'top left';
+        overlayFit.style.transform = `scale(${Number.isFinite(s) ? s : 1})`;
+    } catch {
+        // ignore
+    }
 }
 
 async function bootstrap() {
     const layoutId = getLayoutId();
     console.log('Overlay boot: layoutId=', layoutId);
     currentLayoutId = layoutId;
+
+    applyOverlayScale();
+    window.addEventListener('resize', applyOverlayScale);
 
     try {
         const res = await fetch(`/api/layouts/${encodeURIComponent(layoutId)}`);
@@ -225,7 +395,7 @@ async function bootstrap() {
             const data = await res.json();
             applyLayoutInPlace(data.layout);
             currentLayoutId = id;
-            if (lastState) updateOverlay(lastState);
+            if (lastState) renderOverlay(lastState);
         } catch (e) {
             console.error('Layout swap failed:', e.message);
         }
@@ -238,7 +408,20 @@ async function bootstrap() {
     socket.on('STATE_SYNC', (data) => {
         lastState = data;
         if (data?.activeLayout) loadAndApplyLayout(data.activeLayout);
-        updateOverlay(data);
+        renderOverlay(data);
+    });
+
+    socket.on('VOLUME_CHANGE', (payload) => {
+        try {
+            volumeSettings = {
+                enabled: typeof payload?.enabled === 'boolean' ? payload.enabled : volumeSettings.enabled,
+                master: clamp01(payload?.master, volumeSettings.master),
+                pick: clamp01(payload?.pick, volumeSettings.pick),
+                ban: clamp01(payload?.ban, volumeSettings.ban)
+            };
+        } catch {
+            // ignore
+        }
     });
 
     socket.on('ACTIVE_LAYOUT_CHANGED', (payload) => {

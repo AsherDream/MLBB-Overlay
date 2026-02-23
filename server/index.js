@@ -86,11 +86,55 @@ const backgroundsDir = path.join(serverAssetsRoot, 'backgrounds');
 const logosDir = path.join(serverAssetsRoot, 'logos');
 const mapsDir = path.join(serverAssetsRoot, 'Maps');
 const framesDir = path.join(serverAssetsRoot, 'frames');
+const voiceLinesDir = path.join(serverAssetsRoot, 'VoiceLines');
+const sfxDir = path.join(serverAssetsRoot, 'Sfx');
 
 ensureDir(backgroundsDir);
 ensureDir(logosDir);
 ensureDir(mapsDir);
 ensureDir(framesDir);
+ensureDir(voiceLinesDir);
+ensureDir(sfxDir);
+
+// Static asset serving
+app.use(
+  '/Assets',
+  express.static(serverAssetsRoot, {
+    setHeaders: (res, filePath) => {
+      try {
+        if (String(filePath || '').toLowerCase().endsWith('.ogg')) {
+          res.setHeader('Content-Type', 'audio/ogg');
+        }
+      } catch {
+        // ignore
+      }
+    }
+  })
+);
+
+// Fallback: if voice/sfx are stored in hub/public/Assets, serve them too.
+const hubPublicAssetsRoot = path.join(__dirname, '../hub/public/Assets');
+const hubVoiceLinesDir = path.join(hubPublicAssetsRoot, 'VoiceLines');
+const hubSfxDir = path.join(hubPublicAssetsRoot, 'Sfx');
+if (fs.existsSync(hubVoiceLinesDir)) {
+  app.use(
+    '/Assets/VoiceLines',
+    express.static(hubVoiceLinesDir, {
+      setHeaders: (res, filePath) => {
+        try {
+          if (String(filePath || '').toLowerCase().endsWith('.ogg')) {
+            res.setHeader('Content-Type', 'audio/ogg');
+          }
+        } catch {
+          // ignore
+        }
+      }
+    })
+  );
+}
+if (fs.existsSync(hubSfxDir)) {
+  app.use('/Assets/Sfx', express.static(hubSfxDir));
+}
 
 function listFiles(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -109,6 +153,8 @@ const upload = multer({
       if (kind === 'logos') return cb(null, logosDir);
       if (kind === 'Maps' || kind === 'maps') return cb(null, mapsDir);
       if (kind === 'frames') return cb(null, framesDir);
+      if (kind === 'VoiceLines' || kind === 'voicelines') return cb(null, voiceLinesDir);
+      if (kind === 'Sfx' || kind === 'sfx') return cb(null, sfxDir);
       return cb(new Error('Invalid upload kind'));
     },
     filename: (req, file, cb) => {
@@ -139,6 +185,8 @@ const categorizedUpload = multer({
       if (category === 'background') return cb(null, backgroundsDir);
       if (category === 'frame') return cb(null, framesDir);
       if (category === 'logo') return cb(null, logosDir);
+      if (category === 'voiceline' || category === 'voiceLine' || category === 'voice') return cb(null, voiceLinesDir);
+      if (category === 'sfx' || category === 'sound') return cb(null, sfxDir);
       return cb(new Error('Invalid upload category'));
     },
     filename: (req, file, cb) => {
@@ -161,7 +209,18 @@ app.post('/api/upload', categorizedUpload.single('file'), (req, res) => {
     const category = String(req.body?.category || '').trim();
 
     // Public URLs use the plural folder names.
-    const folder = category === 'background' ? 'backgrounds' : category === 'frame' ? 'frames' : 'logos';
+    const folder =
+      category === 'background'
+        ? 'backgrounds'
+        : category === 'frame'
+          ? 'frames'
+          : category === 'logo'
+            ? 'logos'
+            : category === 'voiceline' || category === 'voiceLine' || category === 'voice'
+              ? 'VoiceLines'
+              : category === 'sfx' || category === 'sound'
+                ? 'Sfx'
+                : 'logos';
     const rel = `/Assets/${folder}/${req.file.filename}`;
     return res.json({ ok: true, url: rel, filename: req.file.filename, category });
   } catch (e) {
@@ -381,6 +440,15 @@ io.on('connection', (socket) => {
       io.emit('ACTIVE_LAYOUT_CHANGED', { id });
     } catch (e) {
       socket.emit('STATE_ERROR', e.message);
+    }
+  });
+
+  socket.on('VOLUME_CHANGE', (payload) => {
+    try {
+      // Payload example: { master: 0.8, pick: 1, ban: 0.6, enabled: true }
+      io.emit('VOLUME_CHANGE', payload);
+    } catch (e) {
+      // ignore
     }
   });
   

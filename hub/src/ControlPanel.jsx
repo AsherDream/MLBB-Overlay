@@ -108,6 +108,11 @@ export default function ControlPanel() {
   const [connected, setConnected] = useState(false)
   const [state, setState] = useState(() => deepClone(DEFAULT_STATE))
 
+  const [audioEnabled, setAudioEnabled] = useState(true)
+  const [masterVolume, setMasterVolume] = useState(1)
+  const [pickVolume, setPickVolume] = useState(1)
+  const [banVolume, setBanVolume] = useState(0.6)
+
   const serverLabel = useMemo(() => SERVER_URL.replace('http://', ''), [])
 
   useEffect(() => {
@@ -135,6 +140,16 @@ export default function ControlPanel() {
     if (!s) return
     s.emit('UPDATE_STATE', next)
   }
+
+  function emitVolume(next) {
+    const s = socketRef.current
+    if (!s) return
+    s.emit('VOLUME_CHANGE', next)
+  }
+
+  useEffect(() => {
+    emitVolume({ enabled: audioEnabled, master: masterVolume, pick: pickVolume, ban: banVolume })
+  }, [audioEnabled, masterVolume, pickVolume, banVolume])
 
   function setMap(nextMap) {
     setState((prev) => {
@@ -243,6 +258,63 @@ export default function ControlPanel() {
             GLOBAL SWAP
           </CompactButton>
           </div>
+        </div>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 text-xs font-semibold tracking-[0.22em] text-white/50">AUDIO ENGINE</div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <span className="text-xs font-bold text-white/80">ENABLED</span>
+            <input
+              type="checkbox"
+              checked={audioEnabled}
+              onChange={(e) => setAudioEnabled(e.target.checked)}
+              className="h-4 w-4"
+            />
+          </label>
+
+          <label className="rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">MASTER</div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={masterVolume}
+              onChange={(e) => setMasterVolume(Number(e.target.value))}
+              className="w-full"
+            />
+            <div className="mt-1 text-[11px] font-semibold text-white/60">{Math.round(masterVolume * 100)}%</div>
+          </label>
+
+          <label className="rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">PICK VOLUME</div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={pickVolume}
+              onChange={(e) => setPickVolume(Number(e.target.value))}
+              className="w-full"
+            />
+            <div className="mt-1 text-[11px] font-semibold text-white/60">{Math.round(pickVolume * 100)}%</div>
+          </label>
+
+          <label className="rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">BAN VOLUME</div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={banVolume}
+              onChange={(e) => setBanVolume(Number(e.target.value))}
+              className="w-full"
+            />
+            <div className="mt-1 text-[11px] font-semibold text-white/60">{Math.round(banVolume * 100)}%</div>
+          </label>
         </div>
       </div>
 

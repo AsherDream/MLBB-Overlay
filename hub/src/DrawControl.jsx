@@ -7,6 +7,7 @@ import { io } from 'socket.io-client'
 const SERVER_URL = 'http://localhost:3000'
 const BASE_W = 1920
 const BASE_H = 1080
+const gridSize = 10
 
 const TRANSPARENT_PX =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X6nVsAAAAASUVORK5CYII='
@@ -168,6 +169,10 @@ export default function DrawControl() {
   const [selectedId, setSelectedId] = useState(null)
   const [matchState, setMatchState] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showGrid, setShowGrid] = useState(false)
+
+  const pastRef = useRef([])
+  const futureRef = useRef([])
   const [boxes, setBoxes] = useState(() =>
     DEFAULT_COMPONENT_IDS.map((id) => ({
       id,
@@ -395,6 +400,36 @@ export default function DrawControl() {
 
   useEffect(() => {
     function onKeyDown(e) {
+      // Undo / Redo
+      const key = String(e.key || '').toLowerCase()
+      const ctrl = e.ctrlKey || e.metaKey
+      if (ctrl && key === 'z') {
+        e.preventDefault()
+        const past = pastRef.current
+        if (!past.length) return
+        setBoxes((current) => {
+          const prevState = past[past.length - 1]
+          pastRef.current = past.slice(0, -1)
+          futureRef.current = [...futureRef.current, current]
+          return prevState
+        })
+        return
+      }
+
+      if (ctrl && key === 'y') {
+        e.preventDefault()
+        const future = futureRef.current
+        if (!future.length) return
+        setBoxes((current) => {
+          const nextState = future[future.length - 1]
+          futureRef.current = future.slice(0, -1)
+          pastRef.current = [...pastRef.current, current]
+          return nextState
+        })
+        return
+      }
+
+      // Fine nudging (bypasses grid snap)
       if (!selectedId) return
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
       e.preventDefault()
@@ -522,6 +557,14 @@ export default function DrawControl() {
           >
             <Save className="size-4" />
             SET AS LIVE OVERLAY
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowGrid((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
+          >
+            {showGrid ? 'HIDE GRID' : 'SHOW GRID'}
           </button>
         </div>
       </div>
@@ -700,6 +743,18 @@ export default function DrawControl() {
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0" />
                 )}
+
+                {showGrid ? (
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      backgroundImage:
+                        'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)',
+                      backgroundSize: `${gridSize}px ${gridSize}px`,
+                      opacity: 0.6
+                    }}
+                  />
+                ) : null}
               </div>
 
               <div id="component-layer" className="absolute inset-0" style={{ zIndex: 10 }}>
@@ -713,6 +768,8 @@ export default function DrawControl() {
                       size={{ width: b.w, height: b.h }}
                       position={{ x: b.x, y: b.y }}
                       scale={scale}
+                      dragGrid={[gridSize, gridSize]}
+                      resizeGrid={[gridSize, gridSize]}
                       disableDragging={!!b.locked}
                       enableResizing={!b.locked}
                       onMouseDown={(e) => {
@@ -720,20 +777,24 @@ export default function DrawControl() {
                         setSelectedId(b.id)
                       }}
                       onDragStop={(e, d) => {
-                        const nx = snap(d.x, 5)
-                        const ny = snap(d.y, 5)
-                        setBoxes((prev) =>
-                          prev.map((p) => (p.id === b.id ? { ...p, x: nx, y: ny } : p))
-                        )
+                        const nx = snap(d.x, gridSize)
+                        const ny = snap(d.y, gridSize)
+                        setBoxes((prev) => {
+                          pastRef.current = [...pastRef.current, prev]
+                          futureRef.current = []
+                          return prev.map((p) => (p.id === b.id ? { ...p, x: nx, y: ny } : p))
+                        })
                       }}
                       onResizeStop={(e, dir, ref, delta, pos) => {
-                        const w = snap(ref.offsetWidth, 5)
-                        const h = snap(ref.offsetHeight, 5)
-                        const x = snap(pos.x, 5)
-                        const y = snap(pos.y, 5)
-                        setBoxes((prev) =>
-                          prev.map((p) => (p.id === b.id ? { ...p, x, y, w, h } : p))
-                        )
+                        const w = snap(ref.offsetWidth, gridSize)
+                        const h = snap(ref.offsetHeight, gridSize)
+                        const x = snap(pos.x, gridSize)
+                        const y = snap(pos.y, gridSize)
+                        setBoxes((prev) => {
+                          pastRef.current = [...pastRef.current, prev]
+                          futureRef.current = []
+                          return prev.map((p) => (p.id === b.id ? { ...p, x, y, w, h } : p))
+                        })
                       }}
                       style={{
                         zIndex: z,
