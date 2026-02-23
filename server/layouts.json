@@ -1,8 +1,8 @@
 {
   "default_draft": {
     "name": "",
-    "background": "/Assets/backgrounds/1771698437263_Draft_Pick_PNG_Greenscreen.png",
-    "frame": "/Assets/frames/1771840682516_Draft_Pick_PNG_Greenscreen.png",
+    "background": "/Assets/backgrounds/Blurred_bg.jpg",
+    "frame": "",
     "components": [
       {
         "id": "blue-team-name",
@@ -463,8 +463,8 @@
   },
   "Testing": {
     "name": "",
-    "background": "/Assets/backgrounds/1771841303091_download.jpg",
-    "frame": "/Assets/frames/1771698437263_Draft_Pick_PNG_Greenscreen.png",
+    "background": "/Assets/backgrounds/Blurred_bg.jpg",
+    "frame": "/Assets/frames/Draft_pick_frame.png",
     "components": [
       {
         "id": "blue-team-name",

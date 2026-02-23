@@ -18,7 +18,7 @@
     ],
     "bans": [
       "freya",
-      "none",
+      "nana",
       "none",
       "none",
       "none"
@@ -51,6 +51,6 @@
   },
   "map": "none",
   "mapType": "expanding_rivers",
-  "activeLayout": "Testing",
+  "activeLayout": "default_draft",
   "phase": "draft"
 }
