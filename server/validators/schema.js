@@ -2,19 +2,13 @@ const { z } = require('zod');
 
 const heroSchema = z.string().min(1, "Hero name cannot be empty");
 
-const playerSchema = z.object({
-  name: z.string().default('')
-});
+const playerSchema = z.string().default('');
 
 const teamSchema = z.object({
   name: z.string().min(1, "Team name cannot be empty"),
   score: z.number().int().min(0).default(0),
   players: z.array(playerSchema).length(5).default([
-    { name: '' },
-    { name: '' },
-    { name: '' },
-    { name: '' },
-    { name: '' }
+    '', '', '', '', ''
   ]),
   picks: z.array(heroSchema).length(5).default(["none", "none", "none", "none", "none"]),
   bans: z.array(heroSchema).length(5).default(["none", "none", "none", "none", "none"])
@@ -37,15 +31,22 @@ const layoutComponentSchema = z.preprocess((val) => {
   return v;
 }, z.object({
   id: z.string().min(1, 'Component id cannot be empty'),
+  type: z.enum(['text', 'image']).default('text'),
   x: z.number(),
   y: z.number(),
   width: z.number().positive(),
-  height: z.number().positive()
+  height: z.number().positive(),
+  visible: z.boolean().optional().default(true),
+  locked: z.boolean().optional().default(false),
+  alias: z.string().optional().default(''),
+  zIndex: z.number().int().optional(),
+  src: z.string().optional().default('')
 }));
 
 const layoutSchema = z.object({
-  backgroundImage: z.string().default(''),
-  frameImage: z.string().default(''),
+  name: z.string().default(''),
+  background: z.string().default(''),
+  frame: z.string().default(''),
   components: z.array(layoutComponentSchema).default([])
 });
 

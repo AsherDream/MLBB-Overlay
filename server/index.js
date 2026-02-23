@@ -11,10 +11,22 @@ const { matchStateSchema, layoutSchema } = require('./validators/schema');
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:5173", // Your Hub's address
-  methods: ["GET", "POST"],
-  credentials: true
+  origin: "*",
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept'],
+  credentials: false
 }));
+
+// Explicit CORS headers middleware for PUT support
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -23,7 +35,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type']
   }
 });
 
@@ -72,10 +85,21 @@ const serverAssetsRoot = path.join(__dirname, 'public/Assets');
 const backgroundsDir = path.join(serverAssetsRoot, 'backgrounds');
 const logosDir = path.join(serverAssetsRoot, 'logos');
 const mapsDir = path.join(serverAssetsRoot, 'Maps');
+const framesDir = path.join(serverAssetsRoot, 'frames');
 
 ensureDir(backgroundsDir);
 ensureDir(logosDir);
 ensureDir(mapsDir);
+ensureDir(framesDir);
+
+function listFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isFile())
+    .map((d) => d.name)
+    .filter((name) => !name.startsWith('.'));
+}
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -84,6 +108,7 @@ const upload = multer({
       if (kind === 'backgrounds') return cb(null, backgroundsDir);
       if (kind === 'logos') return cb(null, logosDir);
       if (kind === 'Maps' || kind === 'maps') return cb(null, mapsDir);
+      if (kind === 'frames') return cb(null, framesDir);
       return cb(new Error('Invalid upload kind'));
     },
     filename: (req, file, cb) => {
@@ -100,16 +125,22 @@ app.post('/api/uploads/:kind', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const kind = req.params.kind;
     const urlKind = kind === 'maps' ? 'Maps' : kind;
-    const rel = `/assets/${urlKind}/${req.file.filename}`;
+    const rel = `/Assets/${urlKind}/${req.file.filename}`;
     return res.json({ ok: true, url: rel, filename: req.file.filename });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
 });
 
-const bgUpload = multer({
+const categorizedUpload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, backgroundsDir),
+    destination: (req, file, cb) => {
+      const category = String(req.body?.category || '').trim();
+      if (category === 'background') return cb(null, backgroundsDir);
+      if (category === 'frame') return cb(null, framesDir);
+      if (category === 'logo') return cb(null, logosDir);
+      return cb(new Error('Invalid upload category'));
+    },
     filename: (req, file, cb) => {
       const safeName = (file.originalname || 'upload')
         .replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -119,12 +150,20 @@ const bgUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// V2 contract: POST /api/upload (backgrounds only)
-app.post('/api/upload', bgUpload.single('file'), (req, res) => {
+// POST /api/upload
+// Multipart fields:
+// - file: the binary
+// - category: background | frame | logo (required)
+app.post('/api/upload', categorizedUpload.single('file'), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const rel = `/Assets/backgrounds/${req.file.filename}`;
-    return res.json({ ok: true, url: rel, filename: req.file.filename });
+
+    const category = String(req.body?.category || '').trim();
+
+    // Public URLs use the plural folder names.
+    const folder = category === 'background' ? 'backgrounds' : category === 'frame' ? 'frames' : 'logos';
+    const rel = `/Assets/${folder}/${req.file.filename}`;
+    return res.json({ ok: true, url: rel, filename: req.file.filename, category });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -143,13 +182,23 @@ app.get('/api/layouts/:id', (req, res) => {
 
 app.get('/api/backgrounds', (req, res) => {
   try {
-    if (!fs.existsSync(backgroundsDir)) return res.json({ backgrounds: [] });
-    const files = fs
-      .readdirSync(backgroundsDir, { withFileTypes: true })
-      .filter((d) => d.isFile())
-      .map((d) => d.name)
-      .filter((name) => !name.startsWith('.'));
-    return res.json({ backgrounds: files });
+    return res.json({ backgrounds: listFiles(backgroundsDir) });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/frames', (req, res) => {
+  try {
+    return res.json({ frames: listFiles(framesDir) });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/logos', (req, res) => {
+  try {
+    return res.json({ logos: listFiles(logosDir) });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -177,6 +226,7 @@ app.put('/api/layouts/:id', (req, res) => {
     const validated = layoutSchema.parse(req.body);
     layouts[id] = validated;
     saveLayouts();
+    io.emit('LAYOUT_UPDATE', id);
     return res.json({ ok: true, id, layout: layouts[id] });
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -215,6 +265,9 @@ app.post('/api/layouts', (req, res) => {
 
     layouts = validatedAll;
     saveLayouts();
+    Object.keys(validatedAll).forEach(layoutId => {
+      io.emit('LAYOUT_UPDATE', layoutId);
+    });
     return res.json({ ok: true, layouts });
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -226,14 +279,14 @@ let matchState = {
   blueTeam: {
     name: "Blue Team",
     score: 0,
-    players: [{ name: '' }, { name: '' }, { name: '' }, { name: '' }, { name: '' }],
+    players: ["", "", "", "", ""],
     picks: ["none", "none", "none", "none", "none"],
     bans: ["none", "none", "none", "none", "none"]
   },
   redTeam: {
     name: "Red Team", 
     score: 0,
-    players: [{ name: '' }, { name: '' }, { name: '' }, { name: '' }, { name: '' }],
+    players: ["", "", "", "", ""],
     picks: ["none", "none", "none", "none", "none"],
     bans: ["none", "none", "none", "none", "none"]
   },
@@ -270,21 +323,17 @@ function saveState() {
   }
 }
 
-// Serve static files
+// Serve static files with strict PascalCase Assets
 const overlayPath = path.join(__dirname, '../overlay');
 app.use('/overlay', express.static(overlayPath));
-app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
+app.use('/Assets', express.static(path.join(__dirname, 'public/Assets')));
 
-// Server-managed assets (uploads)
-app.use('/assets', express.static(serverAssetsRoot));
-
-// V2: Capital-A Assets path for overlays/layouts
+// Server-managed assets (uploads) - only PascalCase
 app.use('/Assets', express.static(serverAssetsRoot));
 
 // Serve Hub assets for overlay thumbnails (HeroPick)
 const hubAssetsPath = path.join(__dirname, '../hub/public/Assets');
 if (fs.existsSync(hubAssetsPath)) {
-  app.use('/assets', express.static(hubAssetsPath));
   app.use('/Assets', express.static(hubAssetsPath));
 }
 

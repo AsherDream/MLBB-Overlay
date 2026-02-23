@@ -3,24 +3,14 @@
     "name": "Renergy",
     "score": 3,
     "players": [
-      {
-        "name": "Austen"
-      },
-      {
-        "name": "Asher"
-      },
-      {
-        "name": "Peter"
-      },
-      {
-        "name": "Allen"
-      },
-      {
-        "name": "Ben"
-      }
+      "Austen",
+      "Asher",
+      "Peter",
+      "Allen",
+      "Ben"
     ],
     "picks": [
-      "ling",
+      "arlot",
       "akai",
       "aamon",
       "miya",
@@ -38,21 +28,11 @@
     "name": "Eagle",
     "score": 0,
     "players": [
-      {
-        "name": "WHy"
-      },
-      {
-        "name": "Amaris"
-      },
-      {
-        "name": "Sky"
-      },
-      {
-        "name": "Andre"
-      },
-      {
-        "name": "Asma"
-      }
+      "WHy",
+      "Amaris",
+      "Sky",
+      "Andre",
+      "Asma"
     ],
     "picks": [
       "roger",
@@ -70,7 +50,7 @@
     ]
   },
   "map": "none",
-  "mapType": "broken_walls",
-  "activeLayout": "default_draft",
+  "mapType": "expanding_rivers",
+  "activeLayout": "Testing",
   "phase": "draft"
 }

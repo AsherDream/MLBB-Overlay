@@ -12,22 +12,22 @@ function getLayoutId() {
     return params.get('id') || 'default_draft';
 }
 
-function setBackground(backgroundImage) {
+function setBackground(background) {
     if (!bgImageEl) return;
-    if (!backgroundImage) {
+    if (!background) {
         bgImageEl.removeAttribute('src');
         return;
     }
-    bgImageEl.src = backgroundImage;
+    bgImageEl.src = background;
 }
 
-function setFrame(frameImage) {
+function setFrame(frame) {
     if (!frameImageEl) return;
-    if (!frameImage) {
+    if (!frame) {
         frameImageEl.removeAttribute('src');
         return;
     }
-    frameImageEl.src = frameImage;
+    frameImageEl.src = frame;
 }
 
 function ensureComponentEl(componentId, component) {
@@ -40,7 +40,7 @@ function ensureComponentEl(componentId, component) {
         // If this looks like an image slot, mount an <img> inside
         const id = String(componentId).toLowerCase();
         const wantsImg = id.includes('pick') || id.includes('ban') || id.includes('map');
-        if (wantsImg) {
+        if (wantsImg || component.type === 'image') {
             const img = document.createElement('img');
             img.alt = '';
             el.appendChild(img);
@@ -51,29 +51,57 @@ function ensureComponentEl(componentId, component) {
         (componentsLayer || overlayRoot).appendChild(el);
     }
 
+    // If the component type changes between text/image, reconcile DOM.
+    const wantsImg = component?.type === 'image';
+    const hasImg = !!el.querySelector('img');
+    if (wantsImg && !hasImg) {
+        const img = document.createElement('img');
+        img.alt = '';
+        el.classList.remove('text');
+        el.appendChild(img);
+    }
+    if (!wantsImg && hasImg) {
+        el.querySelector('img')?.remove();
+        el.classList.add('text');
+    }
+
     el.style.left = `${component.x}px`;
     el.style.top = `${component.y}px`;
     el.style.width = `${component.width}px`;
     el.style.height = `${component.height}px`;
+
+    // Production visibility toggle: hide entirely on overlay
+    el.style.display = component?.visible === false ? 'none' : 'block';
     return el;
 }
 
-function paintLayout(layout) {
-    if (componentsLayer) componentsLayer.innerHTML = '';
+function applyLayoutInPlace(layout) {
     lastValues.clear();
 
-    setBackground(layout.backgroundImage);
-    setFrame(layout.frameImage);
+    setBackground(layout.background);
+    setFrame(layout.frame);
 
-    (layout.components || []).forEach((c) => {
+    const comps = Array.isArray(layout?.components) ? layout.components : [];
+    const seen = new Set();
+    comps.forEach((c) => {
+        if (!c?.id) return;
+        seen.add(c.id);
         ensureComponentEl(c.id, c);
     });
+
+    // Remove stale elements that are no longer in the layout
+    const container = componentsLayer || overlayRoot;
+    if (container) {
+        Array.from(container.querySelectorAll('.component')).forEach((node) => {
+            if (node?.id && !seen.has(node.id)) node.remove();
+        });
+    }
 }
 
 function mapThumb(mapName) {
-    if (!mapName || mapName === 'none') return '/Assets/Maps/idle.png';
+    if (!mapName || mapName === 'none') return '/Assets/Map/idle.png';
     const safe = String(mapName).toLowerCase();
-    return `/Assets/Maps/${safe}.png`;
+    return `/Assets/Map/${safe}.png`;
 }
 
 function heroThumb(hero) {
@@ -148,8 +176,8 @@ function updateOverlay(state) {
 
     for (let i = 0; i < 5; i++) {
         const idx = i + 1;
-        setTextIfExists(`blue-player-${idx}`, state?.blueTeam?.players?.[i]?.name || '');
-        setTextIfExists(`red-player-${idx}`, state?.redTeam?.players?.[i]?.name || '');
+        setTextIfExists(`blue-player-${idx}`, state?.blueTeam?.players?.[i] || '');
+        setTextIfExists(`red-player-${idx}`, state?.redTeam?.players?.[i] || '');
     }
 }
 
@@ -162,7 +190,7 @@ async function bootstrap() {
         const res = await fetch(`/api/layouts/${encodeURIComponent(layoutId)}`);
         if (!res.ok) throw new Error(`Failed to load layout: ${res.status}`);
         const data = await res.json();
-        paintLayout(data.layout);
+        applyLayoutInPlace(data.layout);
     } catch (e) {
         console.error(e);
         overlayRoot.innerHTML = `<div class="component text" style="left:20px;top:20px;width:800px;height:40px;">Layout load error: ${e.message}</div>`;
@@ -171,14 +199,15 @@ async function bootstrap() {
 
     const socket = io('http://localhost:3000');
 
-    async function loadAndApplyLayout(nextId) {
+    async function loadAndApplyLayout(nextId, force) {
         const id = String(nextId || '').trim();
-        if (!id || id === currentLayoutId) return;
+        if (!id) return;
+        if (!force && id === currentLayoutId) return;
         try {
             const res = await fetch(`/api/layouts/${encodeURIComponent(id)}`);
             if (!res.ok) throw new Error(`Failed to load layout: ${res.status}`);
             const data = await res.json();
-            paintLayout(data.layout);
+            applyLayoutInPlace(data.layout);
             currentLayoutId = id;
             if (lastState) updateOverlay(lastState);
         } catch (e) {
@@ -202,6 +231,12 @@ async function bootstrap() {
 
     socket.on('STATE_ERROR', (error) => {
         console.error('State error:', error);
+    });
+
+    socket.on('LAYOUT_UPDATE', (layoutId) => {
+        console.log('Layout update received:', layoutId);
+        const id = String(layoutId || '').trim() || currentLayoutId;
+        loadAndApplyLayout(id, true);
     });
 
     socket.on('disconnect', () => {
