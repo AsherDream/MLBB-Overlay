@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 
-const SERVER_URL = 'http://localhost:3000'
+const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 
 function cx(...classes) {
   return classes.filter(Boolean).join(' ')

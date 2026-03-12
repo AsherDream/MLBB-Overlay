@@ -4,13 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLBB Broadcast Overlay</title>
+    <link rel="icon" href="http://localhost:3000/favicon.ico">
     <style>
+        :root {
+            --main-font: Arial, sans-serif;
+            --font-size-multiplier: 1;
+
+            --theme-bluePrimary: #00d2ff;
+            --theme-blueDark: #003e4d;
+            --theme-redPrimary: #ff2a2a;
+            --theme-redDark: #4d0000;
+            --theme-scoreBlue: #00d2ff;
+            --theme-scoreRed: #ff2a2a;
+            --theme-playerName: #ffffff;
+            --theme-phaseText: #ffffff;
+            --theme-auraBan: #ff0000;
+            --theme-auraPick: #ffffff;
+
+            --toggle-disableGlow: 0;
+            --toggle-hidePattern: 0;
+            --toggle-disableBoxShadow: 0;
+        }
+
         body {
             margin: 0;
             padding: 0;
             background: transparent;
-            font-family: Arial, sans-serif;
+            font-family: var(--main-font);
             overflow: hidden;
+            color: var(--theme-playerName);
         }
 
         #overlayFit {
@@ -24,8 +46,22 @@
         #overlayRoot {
             width: 1920px;
             height: 1080px;
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
             background: transparent;
+            transform-origin: top left;
+            overflow: hidden;
+        }
+
+        .overlay-master {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            overflow: hidden;
         }
 
         .layer {
@@ -34,7 +70,7 @@
         }
 
         #componentsLayer {
-            z-index: 10;
+            z-index: 110;
         }
 
         #bgLayer {
@@ -42,9 +78,52 @@
             pointer-events: none;
         }
 
+        #background-layer {
+            z-index: 2;
+            pointer-events: none;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+        }
+
         #frameLayer {
             z-index: 100;
             pointer-events: none;
+        }
+
+        #frame-layer {
+            z-index: 90;
+            pointer-events: none;
+        }
+
+        #master-frame-layer {
+            z-index: 95;
+            pointer-events: none;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+        }
+
+        #lower-bg {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
+        }
+
+        #lower-mid-bg {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 100% 100%;
         }
 
         .layer img {
@@ -138,8 +217,8 @@
         }
 
         .component.text {
-            color: white;
-            font-size: 24px;
+            color: var(--theme-playerName);
+            font-size: calc(24px * var(--font-size-multiplier));
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             display: flex;
@@ -156,9 +235,15 @@
 </head>
 <body>
     <div id="overlayFit">
-        <div id="overlayRoot">
+        <div id="overlayRoot" class="overlay-master">
             <div id="bgLayer" class="layer"><img id="bgImage" alt="" /></div>
+            <div id="background-layer" class="layer"></div>
             <div id="componentsLayer" class="layer"></div>
+            <div id="frame-layer" class="layer">
+                <div id="lower-bg"></div>
+                <div id="lower-mid-bg"></div>
+            </div>
+            <div id="master-frame-layer" class="layer"></div>
             <div id="frameLayer" class="layer"><img id="frameImage" alt="" /></div>
         </div>
     </div>

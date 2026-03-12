@@ -1,0 +1,35 @@
+{
+  "typography": {
+    "fontFile": "",
+    "useCustomFont": false,
+    "fontSizeMultiplier": 1
+  },
+  "images": {
+    "heroPickBg": "default_bg.jpg",
+    "lowerBg": "",
+    "lowerMidBg": "",
+    "masterFrame": ""
+  },
+  "colors": {
+    "bluePrimary": "#00d2ff",
+    "blueDark": "#003e4d",
+    "redPrimary": "#ff2a2a",
+    "redDark": "#4d0000",
+    "scoreBlue": "#00d2ff",
+    "scoreRed": "#ff2a2a",
+    "playerName": "#ffffff",
+    "phaseText": "#ffffff",
+    "auraBan": "#ff0000",
+    "auraPick": "#ffffff"
+  },
+  "animations": {
+    "banType": "pulse",
+    "pickType": "fade",
+    "heroAnim": "slam"
+  },
+  "toggles": {
+    "disableGlow": false,
+    "hidePattern": false,
+    "disableBoxShadow": false
+  }
+}

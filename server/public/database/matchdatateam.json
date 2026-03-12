@@ -1,0 +1,10 @@
+{
+  "blueTeam": {
+    "name": "BLUE",
+    "score": 0
+  },
+  "redTeam": {
+    "name": "RED",
+    "score": 0
+  }
+}

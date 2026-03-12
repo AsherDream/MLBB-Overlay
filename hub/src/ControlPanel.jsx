@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { ArrowLeftRight, RefreshCcw, Shuffle } from 'lucide-react'
-import HeroSearch from './HeroSearch.jsx'
 import BattlefieldSelector from './BattlefieldSelector.jsx'
+import SmartInput from './SmartInput.jsx'
+import HeroSelect from './HeroSelect.jsx'
+import ThemeManager from './ThemeManager.jsx'
 
-const SERVER_URL = 'http://localhost:3000'
+const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 
 const DEFAULT_TEAM = {
   name: '',
   score: 0,
-  players: [{ name: '' }, { name: '' }, { name: '' }, { name: '' }, { name: '' }],
+  players: ['', '', '', '', ''],
   picks: ['none', 'none', 'none', 'none', 'none'],
   bans: ['none', 'none', 'none', 'none', 'none']
 }
@@ -65,7 +67,9 @@ function CompactButton({ children, onClick, variant = 'primary', icon: Icon }) {
   const cls =
     variant === 'primary'
       ? 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]'
-      : variant === 'ghost'
+      : variant === 'danger'
+        ? 'bg-[#dc2626] text-white hover:bg-[#b91c1c]'
+        : variant === 'ghost'
         ? 'bg-white/10 text-white hover:bg-white/15'
         : 'border border-white/10 bg-transparent text-white/85 hover:bg-white/5'
 
@@ -81,32 +85,38 @@ function FieldLabel({ children }) {
   return <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">{children}</div>
 }
 
-function TextInput({ value, onChange, placeholder }) {
+function TextInput({ value, onChange, placeholder, onBlur, onFocus }) {
   return (
-    <input
+    <SmartInput
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChange}
       placeholder={placeholder}
-      className="h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none placeholder:text-white/30 focus:border-[#7c3aed]"
+      onFocus={onFocus}
+      onBlur={onBlur}
+      debounceMs={300}
     />
   )
 }
 
 function NumberInput({ value, onChange }) {
   return (
-    <input
-      inputMode="numeric"
+    <SmartInput
+      type="number"
       value={value}
-      onChange={(e) => onChange(clampScore(e.target.value))}
-      className="h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none focus:border-[#7c3aed]"
+      onChange={(v) => onChange(clampScore(v))}
+      debounceMs={300}
     />
   )
 }
 
 export default function ControlPanel() {
   const socketRef = useRef(null)
+  const editingRef = useRef(false)
   const [connected, setConnected] = useState(false)
   const [state, setState] = useState(() => deepClone(DEFAULT_STATE))
+
+  const [layouts, setLayouts] = useState([])
+  const [selectedLayoutId, setSelectedLayoutId] = useState('')
 
   const [audioEnabled, setAudioEnabled] = useState(true)
   const [masterVolume, setMasterVolume] = useState(1)
@@ -123,6 +133,7 @@ export default function ControlPanel() {
     socket.on('disconnect', () => setConnected(false))
 
     socket.on('STATE_SYNC', (s) => {
+      if (editingRef.current) return
       setState(s)
     })
 
@@ -135,10 +146,57 @@ export default function ControlPanel() {
     }
   }, [])
 
-  function emit(next) {
+  useEffect(() => {
+    let mounted = true
+    async function loadLayouts() {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/layouts`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!mounted) return
+        const ids = data?.layouts && typeof data.layouts === 'object' ? Object.keys(data.layouts) : []
+        setLayouts(ids)
+        if (!selectedLayoutId && ids.length) setSelectedLayoutId(ids[0])
+      } catch {
+        // ignore
+      }
+    }
+    loadLayouts()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  function emitIntent(eventName, payload) {
     const s = socketRef.current
     if (!s) return
-    s.emit('UPDATE_STATE', next)
+    s.emit(eventName, payload)
+  }
+
+  async function postMatchIntent(payload) {
+    const body = payload && typeof payload === 'object' ? payload : {}
+    const res = await fetch(`${SERVER_URL}/api/matchdata`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
+
+  async function emitReset() {
+    try {
+      await fetch(`${SERVER_URL}/api/theme-reset`, { method: 'POST' })
+      await fetch(`${SERVER_URL}/api/match-reset`, { method: 'POST' })
+    } catch {
+      // ignore
+    }
+  }
+
+  function emitActiveLayout(id) {
+    const s = socketRef.current
+    if (!s) return
+    s.emit('SET_ACTIVE_LAYOUT', { id })
   }
 
   function emitVolume(next) {
@@ -151,86 +209,117 @@ export default function ControlPanel() {
     emitVolume({ enabled: audioEnabled, master: masterVolume, pick: pickVolume, ban: banVolume })
   }, [audioEnabled, masterVolume, pickVolume, banVolume])
 
+  const emitDebounceRef = useRef(null)
+
+  function debounceEmit(payload) {
+    if (emitDebounceRef.current) window.clearTimeout(emitDebounceRef.current)
+    emitDebounceRef.current = window.setTimeout(() => {
+      postMatchIntent(payload).catch(() => {})
+      emitDebounceRef.current = null
+    }, 300)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (emitDebounceRef.current) window.clearTimeout(emitDebounceRef.current)
+    }
+  }, [])
+
   function setMap(nextMap) {
-    setState((prev) => {
-      const next = { ...prev, map: coerceMap(nextMap) }
-      emit(next)
-      return next
-    })
+    const v = coerceMap(nextMap)
+    setState((prev) => ({ ...prev, map: v }))
   }
 
   function setMapType(nextMapType) {
-    setState((prev) => {
-      const next = { ...prev, mapType: coerceMapType(nextMapType) }
-      emit(next)
-      return next
-    })
-  }
-
-  function updateTeam(side, updater) {
-    const next = deepClone(state)
-    next[side] = updater(next[side])
-    emit(next)
+    const v = coerceMapType(nextMapType)
+    setState((prev) => ({ ...prev, mapType: v }))
+    postMatchIntent({ intent: 'SET_MAP_TYPE', mapType: v }).catch(() => {})
   }
 
   function resetAll() {
-    emit(deepClone(DEFAULT_STATE))
+    emitReset()
   }
 
   function globalSwapTeams() {
-    setState((prev) => {
-      const next = {
-        ...prev,
-        blueTeam: deepClone(prev.redTeam),
-        redTeam: deepClone(prev.blueTeam),
-        map: prev.map,
-        mapType: prev.mapType
-      }
-      emit(next)
-      return next
-    })
+    postMatchIntent({ intent: 'GLOBAL_SWAP' }).catch(() => {})
   }
 
   function swapPlayers(side, aIdx, bIdx) {
-    updateTeam(side, (t) => {
-      const team = deepClone(t)
-      const tmp = team.players[aIdx]
-      team.players[aIdx] = team.players[bIdx]
-      team.players[bIdx] = tmp
-      return team
+    setState((prev) => {
+      const next = deepClone(prev)
+      const t = next[side]
+      const tmp = t.players[aIdx]
+      t.players[aIdx] = t.players[bIdx]
+      t.players[bIdx] = tmp
+      return next
     })
+    postMatchIntent({ intent: 'SWAP_PLAYERS', side, aIdx, bIdx }).catch(() => {})
   }
 
   function setPick(side, idx, hero) {
-    updateTeam(side, (t) => {
-      const team = deepClone(t)
-      team.picks[idx] = hero
-      return team
+    const v = String(hero || 'none')
+    setState((prev) => {
+      const next = deepClone(prev)
+      next[side].picks[idx] = v
+      return next
     })
+    postMatchIntent({ intent: 'SET_PICK', side, idx, hero: v }).catch(() => {})
   }
 
   function setBan(side, idx, hero) {
-    updateTeam(side, (t) => {
-      const team = deepClone(t)
-      team.bans[idx] = hero
-      return team
+    const v = String(hero || 'none')
+    setState((prev) => {
+      const next = deepClone(prev)
+      next[side].bans[idx] = v
+      return next
     })
+    postMatchIntent({ intent: 'SET_BAN', side, idx, hero: v }).catch(() => {})
   }
 
   function setPlayer(side, idx, name) {
-    updateTeam(side, (t) => {
-      const team = deepClone(t)
-      team.players[idx] = { ...team.players[idx], name }
-      return team
+    const v = String(name || '')
+    setState((prev) => {
+      const next = deepClone(prev)
+      next[side].players[idx] = v
+      return next
     })
+    debounceEmit({ intent: 'SET_PLAYER_NAME', side, idx, name: v })
+  }
+
+  function flushPlayerEmit() {
+    if (emitDebounceRef.current) {
+      window.clearTimeout(emitDebounceRef.current)
+      emitDebounceRef.current = null
+    }
+    // no-op: intents are emitted via debounceEmit now
+  }
+
+  function onEditStart() {
+    editingRef.current = true
+  }
+
+  function onEditEnd() {
+    editingRef.current = false
   }
 
   function setTeamName(side, name) {
-    updateTeam(side, (t) => ({ ...t, name }))
+    const v = String(name || '')
+    setState((prev) => {
+      const next = deepClone(prev)
+      next[side].name = v
+      return next
+    })
+    postMatchIntent({ intent: 'SET_TEAM_NAME', side, name: v }).catch(() => {})
   }
 
   function setTeamScore(side, score) {
-    updateTeam(side, (t) => ({ ...t, score: clampScore(score) }))
+    const v = clampScore(score)
+    setState((prev) => {
+      const next = deepClone(prev)
+      next[side].score = v
+      return next
+    })
+    postMatchIntent({ intent: 'SET_TEAM_SCORE', side, score: v }).catch(() => {})
   }
 
   return (
@@ -251,12 +340,46 @@ export default function ControlPanel() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-          <CompactButton icon={RefreshCcw} onClick={resetAll} variant="ghost">
+          <CompactButton icon={RefreshCcw} onClick={resetAll} variant="danger">
             RESET
           </CompactButton>
           <CompactButton icon={Shuffle} onClick={globalSwapTeams}>
             GLOBAL SWAP
           </CompactButton>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 text-xs font-semibold tracking-[0.22em] text-white/50">SCENE MANAGER</div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <label className="min-w-[280px] rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">ACTIVE LAYOUT</div>
+            <select
+              value={selectedLayoutId}
+              onChange={(e) => setSelectedLayoutId(e.target.value)}
+              onFocus={(e) => e.target.select?.()}
+              className="h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
+            >
+              {layouts.map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex gap-2">
+            <CompactButton
+              onClick={() => {
+                const id = String(selectedLayoutId || '').trim()
+                if (!id) return
+                emitActiveLayout(id)
+              }}
+              variant="primary"
+            >
+              GO LIVE
+            </CompactButton>
           </div>
         </div>
       </div>
@@ -318,6 +441,10 @@ export default function ControlPanel() {
         </div>
       </div>
 
+      <div className="mb-5">
+        <ThemeManager />
+      </div>
+
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="flex-1">
           <TeamBlock
@@ -327,6 +454,9 @@ export default function ControlPanel() {
             onTeamName={(v) => setTeamName('blueTeam', v)}
             onScore={(v) => setTeamScore('blueTeam', v)}
             onPlayer={(idx, v) => setPlayer('blueTeam', idx, v)}
+            onBlurPlayer={flushPlayerEmit}
+            onEditStart={onEditStart}
+            onEditEnd={onEditEnd}
             onSwapPlayers={(a, b) => swapPlayers('blueTeam', a, b)}
             onPick={(idx, hero) => setPick('blueTeam', idx, hero)}
             onBan={(idx, hero) => setBan('blueTeam', idx, hero)}
@@ -341,6 +471,9 @@ export default function ControlPanel() {
             onTeamName={(v) => setTeamName('redTeam', v)}
             onScore={(v) => setTeamScore('redTeam', v)}
             onPlayer={(idx, v) => setPlayer('redTeam', idx, v)}
+            onBlurPlayer={flushPlayerEmit}
+            onEditStart={onEditStart}
+            onEditEnd={onEditEnd}
             onSwapPlayers={(a, b) => swapPlayers('redTeam', a, b)}
             onPick={(idx, hero) => setPick('redTeam', idx, hero)}
             onBan={(idx, hero) => setBan('redTeam', idx, hero)}
@@ -358,6 +491,9 @@ function TeamBlock({
   onTeamName,
   onScore,
   onPlayer,
+  onBlurPlayer,
+  onEditStart,
+  onEditEnd,
   onSwapPlayers,
   onPick,
   onBan
@@ -387,8 +523,13 @@ function TeamBlock({
           {Array.from({ length: 5 }).map((_, idx) => (
             <div key={idx} className="grid grid-cols-[1fr_auto] gap-2">
               <TextInput
-                value={team?.players?.[idx]?.name || ''}
+                value={team?.players?.[idx] || ''}
                 onChange={(v) => onPlayer(idx, v)}
+                onFocus={() => onEditStart?.()}
+                onBlur={() => {
+                  onEditEnd?.()
+                  onBlurPlayer?.()
+                }}
                 placeholder={`Player ${idx + 1}`}
               />
               <div className="flex gap-2">
@@ -413,11 +554,7 @@ function TeamBlock({
             {Array.from({ length: 5 }).map((_, idx) => (
               <div key={idx} className="rounded-xl border border-white/10 bg-[#0f0c15] p-2" style={{ borderColor: `${accent}22` }}>
                 <div className="mb-1 text-[11px] font-semibold text-white/50">Pick {idx + 1}</div>
-                <HeroSearch
-                  value={team?.picks?.[idx] || 'none'}
-                  onSelect={(hero) => onPick(idx, hero)}
-                  placeholder="Select hero"
-                />
+                <HeroSelect value={team?.picks?.[idx] || 'none'} onSelect={(hero) => onPick(idx, hero)} />
               </div>
             ))}
           </div>
@@ -429,11 +566,7 @@ function TeamBlock({
             {Array.from({ length: 5 }).map((_, idx) => (
               <div key={idx} className="rounded-xl border border-white/10 bg-[#0f0c15] p-2" style={{ borderColor: `${accent}22` }}>
                 <div className="mb-1 text-[11px] font-semibold text-white/50">Ban {idx + 1}</div>
-                <HeroSearch
-                  value={team?.bans?.[idx] || 'none'}
-                  onSelect={(hero) => onBan(idx, hero)}
-                  placeholder="Select hero"
-                />
+                <HeroSelect value={team?.bans?.[idx] || 'none'} onSelect={(hero) => onBan(idx, hero)} />
               </div>
             ))}
           </div>

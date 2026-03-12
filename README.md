@@ -1,21 +1,23 @@
 # MLBB Broadcast Suite
 
-A real-time esports broadcast suite for Mobile Legends: Bang Bang (MLBB) built around a **Headless State API** plus a **dynamic overlay renderer**. Layouts are stored as JSON and the overlay is generated at runtime from a `layout_id` (no hardcoded CSS positions).
+A real-time esports broadcast suite for Mobile Legends: Bang Bang (MLBB) built around a **server-authoritative state API**, a **React Hub** (control + editor), and a **dynamic overlay renderer**. Layouts are stored as JSON and the overlay is generated at runtime from a `layout_id` (no hardcoded CSS positions).
 
 ## Architecture Overview
 
 The system is composed of three interconnected modules:
 
-### 1. The Core API (State & Layout Manager)
+### 1. The Core API (State, Layout, Theme Authority)
 - **Location**: `/server`
 - **Technology**: Node.js, Express, Socket.io, Zod
-- **Purpose**: Source of truth for **live match state** and **saved overlay layouts**
+- **Purpose**: Source of truth for **live match state**, **saved overlay layouts**, and **theme.json**
 - **Features**:
   - Binds to `0.0.0.0:3000` for LAN access
   - Zod schema validation for data integrity
   - Atomic state persistence to `matchState.json`
   - Layout persistence to `layouts.json`
+  - Theme persistence to `server/public/Assets/costum/Theme/theme.json`
   - Real-time state synchronization via Socket.io (`STATE_SYNC`)
+  - Theme broadcast via Socket.io (`theme_update`)
 
 ### 2. The Dynamic OBS Overlay (Renderer)
 - **Location**: `/overlay`
@@ -28,15 +30,17 @@ The system is composed of three interconnected modules:
 - **Features**:
   - Connects to State Server via Socket.io
   - Dynamic DOM updates based on match state
+  - Proportional 1920x1080 stage scaling using `Math.min(wRatio, hRatio)`
+  - Theme engine: `injectTheme()` maps `theme.json` to CSS variables and image layers
   - Minimal UI proving the data bridge works
 
-### 3. The Hub (Planned React App)
-- **Location**: `/hub` (not implemented in this repo yet)
+### 3. The Hub (React)
+- **Location**: `/hub`
 - **Technology**: Vite + React
 - **Views**:
-  - Hub landing page (server status + IPs + links)
-  - Control Panel (mutates `matchState`)
+  - Control Panel (server-authoritative state intents)
   - Layout Editor (WYSIWYG drag/resize, saves to `layouts.json`)
+  - Theme Manager (uploads + live theme updates)
 
 ## Quick Start
 
@@ -64,7 +68,16 @@ The system is composed of three interconnected modules:
 4. **View the Overlay**
    - Open:
      - `http://localhost:3000/overlay/?id=default_draft`
+   - To allow the overlay to follow Hub scene changes live:
+     - `http://localhost:3000/overlay/?id=default_draft&follow=1`
    - Add that URL as an OBS Browser Source.
+
+5. **Run the Hub (Vite dev)**
+   ```bash
+   cd hub
+   npm install
+   npm run dev
+   ```
 
 ## Usage
 
@@ -82,22 +95,14 @@ You can test state updates by opening the browser console on any client and emit
 // Connect to socket
 const socket = io('http://localhost:3000');
 
-// Update team names
-socket.emit('UPDATE_STATE', {
-  blueTeam: {
-    name: "Team Alpha",
-    score: 0,
-    picks: ["fanny", "none", "none", "none", "none"],
-    bans: ["none", "none", "none", "none", "none"]
-  },
-  redTeam: {
-    name: "Team Beta", 
-    score: 0,
-    picks: ["none", "none", "none", "none", "none"],
-    bans: ["none", "none", "none", "none", "none"]
-  },
-  phase: "draft"
-});
+// Preferred: intent-style updates
+socket.emit('SET_TEAM_NAME', { side: 'blueTeam', name: 'Team Alpha' });
+socket.emit('SET_TEAM_SCORE', { side: 'blueTeam', score: 1 });
+socket.emit('SET_PLAYER_NAME', { side: 'blueTeam', idx: 0, name: 'Player 1' });
+socket.emit('SET_PICK', { side: 'blueTeam', idx: 0, hero: 'ling' });
+socket.emit('SET_BAN', { side: 'redTeam', idx: 0, hero: 'arlott' });
+socket.emit('SWAP_PLAYERS', { side: 'blueTeam', aIdx: 0, bIdx: 1 });
+socket.emit('GLOBAL_SWAP');
 ```
 
 ## File Structure
@@ -113,9 +118,20 @@ MLBB-Overlay/
 │   ├── package.json
 │   └── matchState.json       # Persistent state storage (auto-generated)
 │   └── layouts.json          # Saved overlay layouts
+│   └── theme.json            # Saved theme data
 ├── overlay/
 │   ├── index.html            # Overlay HTML
 │   └── app.js                # Overlay JavaScript client
+├── hub/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── HubHome.tsx
+│   │   │   ├── ControlPanel.tsx
+│   │   │   └── LayoutEditor.tsx
+│   │   └── lib/
+│   │       ├── api.ts
+│   │       └── socket.ts
+│   └── package.json
 └── README.md
 ```
 
@@ -134,8 +150,21 @@ MLBB-Overlay/
 ### Socket.io Events
 
 - **STATE_SYNC**: Broadcasted to all clients when state updates
-- **UPDATE_STATE**: Sent by clients to update the match state
+- **theme_update**: Broadcasted to all clients when theme updates
+- **UPDATE_STATE**: Legacy full-state update (kept for compatibility)
+- **SET_TEAM_NAME**, **SET_TEAM_SCORE**
+- **SET_PLAYER_NAME**, **SWAP_PLAYERS**
+- **SET_PICK**, **SET_BAN**
+- **SET_MAP_TYPE**, **SET_PHASE**
+- **GLOBAL_SWAP**
 - **STATE_ERROR**: Emitted when state validation fails
+
+### Theme REST API
+
+- `GET /api/theme`
+- `POST /api/theme`
+- `POST /api/theme-reset`
+- `POST /api/theme-upload` (multipart form-data; `kind=font|image`, `key=images.*|typography.fontFile`)
 
 ## State Schema
 

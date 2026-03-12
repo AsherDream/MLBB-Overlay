@@ -1,45 +1,45 @@
 {
   "blueTeam": {
-    "name": "Renergy",
-    "score": 3,
+    "name": "Blue Team",
+    "score": 0,
     "players": [
-      "Austen",
-      "Asher",
-      "Peter",
-      "Allen",
-      "Ben"
+      "",
+      "",
+      "",
+      "",
+      ""
     ],
     "picks": [
-      "argus",
-      "akai",
-      "aamon",
-      "miya",
-      "aamon"
+      "none",
+      "none",
+      "none",
+      "none",
+      "none"
     ],
     "bans": [
-      "freya",
-      "nana",
+      "none",
+      "none",
       "none",
       "none",
       "none"
     ]
   },
   "redTeam": {
-    "name": "Eagle",
+    "name": "Red Team",
     "score": 0,
     "players": [
-      "WHy",
-      "Amaris",
-      "Sky",
-      "Andre",
-      "Asma"
+      "",
+      "",
+      "",
+      "",
+      ""
     ],
     "picks": [
-      "fredrin",
-      "argus",
-      "yin",
-      "yisunshin",
-      "alpha"
+      "none",
+      "none",
+      "none",
+      "none",
+      "none"
     ],
     "bans": [
       "none",
@@ -50,7 +50,7 @@
     ]
   },
   "map": "none",
-  "mapType": "expanding_rivers",
-  "activeLayout": "Testing",
+  "mapType": "none",
+  "activeLayout": "default_draft",
   "phase": "draft"
 }

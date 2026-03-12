@@ -5,7 +5,8 @@ import ControlPanel from './ControlPanel.jsx'
 import DrawControl from './DrawControl.jsx'
 import LayoutManager from './LayoutManager.jsx'
 
-const SERVER_ADDRESS = '192.168.1.190:3000'
+const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
+const SERVER_ADDRESS = SERVER_URL.replace(/^https?:\/\//, '')
 
 function copy(text) {
   return navigator.clipboard.writeText(text)

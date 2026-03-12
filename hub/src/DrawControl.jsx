@@ -1,33 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Rnd } from 'react-rnd'
-import { Save, Upload, Eye, EyeOff, Lock, Unlock } from 'lucide-react'
-import { io } from 'socket.io-client'
+import { Save, Upload } from 'lucide-react'
+import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
+import ModularCanvas from './ModularCanvas.jsx'
+import LayerProperties from './LayerProperties.jsx'
+import { defaultSizeForAtom, newInstanceId } from './atoms.js'
 
-const SERVER_URL = 'http://localhost:3000'
-const BASE_W = 1920
-const BASE_H = 1080
-const gridSize = 10
-
-const TRANSPARENT_PX =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X6nVsAAAAASUVORK5CYII='
-
-const DEFAULT_COMPONENT_IDS = ['map-type-icon']
-
-function inferTypeFromId(id) {
-  const s = String(id || '').toLowerCase()
-  if (s.includes('pick') || s.includes('ban') || s.includes('map')) return 'image'
-  return 'text'
-}
-
-function isImageId(id) {
-  const s = String(id || '').toLowerCase()
-  return s.includes('pick') || s.includes('ban') || s.includes('logo') || s.includes('map')
-}
-
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n))
-}
+const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 
 function toServerUrl(url) {
   const s = String(url || '')
@@ -44,216 +23,52 @@ function toRelativeAssetsPath(url) {
   return s
 }
 
-function normalizeComponent({ id, type, x, y, w, h, width, height }) {
-  const ww = typeof width === 'number' ? width : w
-  const hh = typeof height === 'number' ? height : h
-  return {
-    id,
-    type: type || inferTypeFromId(id),
-    visible: true,
-    locked: false,
-    alias: '',
-    zIndex: undefined,
-    src: '',
-    x: typeof x === 'number' ? x : 0,
-    y: typeof y === 'number' ? y : 0,
-    w: typeof ww === 'number' ? ww : 100,
-    h: typeof hh === 'number' ? hh : 40
-  }
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n))
 }
 
 function clampInt(n, min, max) {
-  const x = Number.isFinite(n) ? n : 0
+  const x = Number.isFinite(n) ? n : parseInt(String(n || '0'), 10)
+  if (Number.isNaN(x)) return min
   return Math.max(min, Math.min(max, Math.round(x)))
 }
 
-function snap(n, step) {
-  if (!step) return Math.round(n)
-  return Math.round(n / step) * step
-}
-
-function getAssetUrlFromId(id, state) {
-  const s = String(id || '').toLowerCase()
-  if (s.includes('map')) {
-    const mapType = state?.mapType || state?.map || 'none'
-    if (!mapType || mapType === 'none') return TRANSPARENT_PX
-    return `/Assets/Maps/${String(mapType).toLowerCase()}.png`
+function normalizeNewComponent(c, fallbackZ) {
+  const size = defaultSizeForAtom(c?.atom)
+  const bind = c?.bind && typeof c.bind === 'object' ? c.bind : {}
+  return {
+    instanceId: String(c?.instanceId || newInstanceId(c?.atom || 'ATOM')),
+    atom: String(c?.atom || ''),
+    x: typeof c?.x === 'number' ? c.x : 0,
+    y: typeof c?.y === 'number' ? c.y : 0,
+    width: typeof c?.width === 'number' ? c.width : size.width,
+    height: typeof c?.height === 'number' ? c.height : size.height,
+    visible: typeof c?.visible === 'boolean' ? c.visible : true,
+    locked: typeof c?.locked === 'boolean' ? c.locked : false,
+    alias: typeof c?.alias === 'string' ? c.alias : '',
+    zIndex: typeof c?.zIndex === 'number' ? c.zIndex : fallbackZ,
+    src: typeof c?.src === 'string' ? c.src : '',
+    bind
   }
-  if (s.includes('pick-')) {
-    const m = s.match(/(blue|red)-pick-(\d+)/)
-    if (!m) return ''
-    const team = m[1]
-    const idx = Number(m[2]) - 1
-    const hero = team === 'blue' ? state?.blueTeam?.picks?.[idx] : state?.redTeam?.picks?.[idx]
-    if (!hero || hero === 'none') return TRANSPARENT_PX
-    return `/Assets/HeroPick/${String(hero).toLowerCase()}.png`
-  }
-  if (s.includes('ban-')) {
-    const m = s.match(/(blue|red)-ban-(\d+)/)
-    if (!m) return ''
-    const team = m[1]
-    const idx = Number(m[2]) - 1
-    const hero = team === 'blue' ? state?.blueTeam?.bans?.[idx] : state?.redTeam?.bans?.[idx]
-    if (!hero || hero === 'none') return TRANSPARENT_PX
-    return `/Assets/HeroPick/${String(hero).toLowerCase()}.png`
-  }
-  return ''
-}
-
-function getTextFromId(id, state) {
-  const s = String(id || '').toLowerCase()
-  if (s === 'blue-team-name') return state?.blueTeam?.name || ''
-  if (s === 'red-team-name') return state?.redTeam?.name || ''
-  if (s.includes('score') && s.includes('blue')) return String(state?.blueTeam?.score ?? '')
-  if (s.includes('score') && s.includes('red')) return String(state?.redTeam?.score ?? '')
-  if (s === 'map-slot') return String(state?.map || '')
-  const pm = s.match(/(blue|red)-player-(\d+)/)
-  if (pm) {
-    const team = pm[1]
-    const idx = Number(pm[2]) - 1
-    return team === 'blue' ? state?.blueTeam?.players?.[idx] || '' : state?.redTeam?.players?.[idx] || ''
-  }
-  return ''
-}
-
-function SmartBox({ box, matchState }) {
-  const id = String(box?.id || '')
-  const shouldRenderImage = isImageId(id)
-  const imgSrc = shouldRenderImage
-    ? box?.src
-      ? toServerUrl(box.src)
-      : toServerUrl(getAssetUrlFromId(id, matchState))
-    : ''
-  const text = shouldRenderImage ? '' : getTextFromId(id, matchState)
-
-  if (shouldRenderImage) {
-    const fallback = TRANSPARENT_PX
-    const isBan = String(id || '').toLowerCase().includes('ban')
-    return (
-      <img
-        src={imgSrc}
-        alt=""
-        draggable={false}
-        onError={(e) => {
-          try {
-            if (e?.currentTarget?.src !== fallback) e.currentTarget.src = fallback
-          } catch {
-            // ignore
-          }
-        }}
-        className="pointer-events-none h-full w-full select-none object-contain"
-        style={{ filter: isBan ? 'grayscale(100%) brightness(50%)' : undefined }}
-      />
-    )
-  }
-
-  return (
-    <div className="pointer-events-none flex h-full w-full select-none items-center px-2 text-xs font-semibold text-white/90">
-      {text || box?.alias || box?.id}
-    </div>
-  )
 }
 
 export default function DrawControl() {
   const params = useParams()
-  const layoutId = params?.id || 'default_draft'
+  const layoutId = params?.id || 'testing'
   const wrapRef = useRef(null)
-  const [scale, setScale] = useState(1)
+
+  const [scale, setScale] = useState(0.35)
+  const [layoutName, setLayoutName] = useState(layoutId)
+  const [selectedId, setSelectedId] = useState(null)
+  const [components, setComponents] = useState([])
 
   const [background, setBackground] = useState('')
   const [frame, setFrame] = useState('')
   const [backgrounds, setBackgrounds] = useState([])
   const [frames, setFrames] = useState([])
-  const [logos, setLogos] = useState([])
-  const [layoutName, setLayoutName] = useState(layoutId)
-  const [selectedId, setSelectedId] = useState(null)
-  const [matchState, setMatchState] = useState(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [showGrid, setShowGrid] = useState(false)
-
-  const pastRef = useRef([])
-  const futureRef = useRef([])
-  const [boxes, setBoxes] = useState(() =>
-    DEFAULT_COMPONENT_IDS.map((id) => ({
-      id,
-      type: inferTypeFromId(id),
-      visible: true,
-      locked: false,
-      alias: '',
-      zIndex: undefined,
-      src: '',
-      x: 40,
-      y: 40,
-      w: 120,
-      h: 120
-    }))
-  )
-
-  useEffect(() => {
-    try {
-      const socket = io(SERVER_URL)
-      socket.on('STATE_SYNC', (state) => {
-        try {
-          setMatchState(state)
-        } catch {
-          // ignore
-        }
-      })
-      return () => socket.disconnect()
-    } catch {
-      return undefined
-    }
-  }, [])
 
   useEffect(() => {
     let mounted = true
-    async function loadBackgrounds() {
-      try {
-        const res = await fetch(`${SERVER_URL}/api/backgrounds`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (!mounted) return
-        setBackgrounds(Array.isArray(data?.backgrounds) ? data.backgrounds : [])
-      } catch {
-        // ignore
-      }
-    }
-
-    async function loadFrames() {
-      try {
-        const res = await fetch(`${SERVER_URL}/api/frames`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (!mounted) return
-        setFrames(Array.isArray(data?.frames) ? data.frames : [])
-      } catch {
-        // ignore
-      }
-    }
-
-    async function loadLogos() {
-      try {
-        const res = await fetch(`${SERVER_URL}/api/logos`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (!mounted) return
-        setLogos(Array.isArray(data?.logos) ? data.logos : [])
-      } catch {
-        // ignore
-      }
-    }
-
-    loadBackgrounds()
-    loadFrames()
-    loadLogos()
-    return () => {
-      mounted = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let mounted = true
-
     async function load() {
       try {
         const res = await fetch(`${SERVER_URL}/api/layouts/${encodeURIComponent(layoutId)}`)
@@ -262,21 +77,65 @@ export default function DrawControl() {
         if (!mounted) return
         const layout = data?.layout
         setLayoutName(layoutId)
-        const bg = layout?.background ?? layout?.backgroundImage
-        const fr = layout?.frame ?? layout?.frameImage
-        if (bg) setBackground(toServerUrl(bg))
-        if (fr) setFrame(toServerUrl(fr))
-        if (Array.isArray(layout?.components)) {
-          const normalized = layout.components.map((c, idx) => ({
-            ...normalizeComponent(c),
-            visible: typeof c?.visible === 'boolean' ? c.visible : true,
-            locked: typeof c?.locked === 'boolean' ? c.locked : false,
-            alias: typeof c?.alias === 'string' ? c.alias : '',
-            src: typeof c?.src === 'string' ? c.src : '',
-            zIndex: typeof c?.zIndex === 'number' ? c.zIndex : idx
-          }))
-          setBoxes(normalized)
-        }
+        setBackground(toServerUrl(layout?.background || ''))
+        setFrame(toServerUrl(layout?.frame || ''))
+        const comps = Array.isArray(layout?.components) ? layout.components : []
+
+        // Migrate legacy components (id/type) into new schema for editing.
+        const migrated = comps.map((c, idx) => {
+          if (c && typeof c === 'object' && c.instanceId && c.atom) return normalizeNewComponent(c, idx)
+
+          // Legacy -> atom inference based on id
+          const id = String(c?.id || '')
+          const s = id.toLowerCase()
+          let atom = 'T1_NAME'
+          let bind = {}
+          if (s === 'blue-team-name') atom = 'T1_NAME'
+          else if (s === 'red-team-name') atom = 'T2_NAME'
+          else if (s === 'blue-score') atom = 'T1_SCORE'
+          else if (s === 'red-score') atom = 'T2_SCORE'
+          else if (s.includes('blue-player-')) {
+            atom = 'T1_PLAYER_NAME'
+            bind = { idx: Math.max(0, Math.min(4, Number(s.split('blue-player-')[1]) - 1)) }
+          } else if (s.includes('red-player-')) {
+            atom = 'T2_PLAYER_NAME'
+            bind = { idx: Math.max(0, Math.min(4, Number(s.split('red-player-')[1]) - 1)) }
+          } else if (s.includes('blue-pick-')) {
+            atom = 'T1_PICK'
+            bind = { idx: Math.max(0, Math.min(4, Number(s.split('blue-pick-')[1]) - 1)) }
+          } else if (s.includes('red-pick-')) {
+            atom = 'T2_PICK'
+            bind = { idx: Math.max(0, Math.min(4, Number(s.split('red-pick-')[1]) - 1)) }
+          } else if (s.includes('blue-ban-')) {
+            atom = 'T1_BAN'
+            bind = { idx: Math.max(0, Math.min(4, Number(s.split('blue-ban-')[1]) - 1)) }
+          } else if (s.includes('red-ban-')) {
+            atom = 'T2_BAN'
+            bind = { idx: Math.max(0, Math.min(4, Number(s.split('red-ban-')[1]) - 1)) }
+          } else if (s.includes('map')) {
+            atom = 'MAP'
+          }
+
+          return normalizeNewComponent(
+            {
+              instanceId: newInstanceId(atom),
+              atom,
+              x: c?.x ?? 0,
+              y: c?.y ?? 0,
+              width: c?.width ?? c?.w,
+              height: c?.height ?? c?.h,
+              alias: c?.alias || '',
+              visible: typeof c?.visible === 'boolean' ? c.visible : true,
+              locked: typeof c?.locked === 'boolean' ? c.locked : false,
+              zIndex: typeof c?.zIndex === 'number' ? c.zIndex : idx,
+              src: c?.src || '',
+              bind
+            },
+            idx
+          )
+        })
+
+        setComponents(migrated)
       } catch {
         // ignore
       }
@@ -287,31 +146,58 @@ export default function DrawControl() {
       mounted = false
     }
   }, [layoutId])
+
+  useEffect(() => {
+    let mounted = true
+    async function loadAssets() {
+      try {
+        const [bgRes, frRes] = await Promise.all([
+          fetch(`${SERVER_URL}/api/backgrounds`),
+          fetch(`${SERVER_URL}/api/frames`)
+        ])
+        if (mounted && bgRes.ok) {
+          const data = await bgRes.json()
+          setBackgrounds(Array.isArray(data?.backgrounds) ? data.backgrounds : [])
+        }
+        if (mounted && frRes.ok) {
+          const data = await frRes.json()
+          setFrames(Array.isArray(data?.frames) ? data.frames : [])
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadAssets()
+    return () => {
+      mounted = false
+    }
+  }, [])
   const payload = useMemo(() => {
     return {
+      name: layoutName,
       background: toRelativeAssetsPath(background),
       frame: toRelativeAssetsPath(frame),
-      components: boxes.map((b, idx) => ({
-        id: b.id,
-        type: b.type || inferTypeFromId(b.id),
-        visible: typeof b.visible === 'boolean' ? b.visible : true,
-        locked: typeof b.locked === 'boolean' ? b.locked : false,
-        alias: String(b.alias || ''),
-        zIndex: typeof b.zIndex === 'number' ? b.zIndex : idx,
-        src: String(b.src || ''),
-        // b.x/b.y are already in the 1920x1080 coordinate space (we render scaled)
-        x: Math.round(b.x),
-        y: Math.round(b.y),
-        width: Math.round(b.w),
-        height: Math.round(b.h)
+      components: (components || []).map((c, idx) => ({
+        instanceId: String(c.instanceId),
+        atom: String(c.atom),
+        x: Math.round(c.x),
+        y: Math.round(c.y),
+        width: Math.round(c.width),
+        height: Math.round(c.height),
+        visible: typeof c.visible === 'boolean' ? c.visible : true,
+        locked: typeof c.locked === 'boolean' ? c.locked : false,
+        alias: String(c.alias || ''),
+        zIndex: typeof c.zIndex === 'number' ? c.zIndex : idx,
+        src: String(c.src || ''),
+        bind: c.bind && typeof c.bind === 'object' ? c.bind : {}
       }))
     }
-  }, [background, frame, boxes])
+  }, [layoutName, components])
 
   async function uploadAsset(file, category) {
     const fd = new FormData()
     fd.append('file', file)
-    if (category) fd.append('category', category)
+    fd.append('category', category)
     const res = await fetch(`${SERVER_URL}/api/upload`, { method: 'POST', body: fd })
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
     return res.json()
@@ -323,8 +209,6 @@ export default function DrawControl() {
     if (!file) return
     const out = await uploadAsset(file, 'background')
     setBackground(toServerUrl(out.url))
-
-    // refresh library
     try {
       const res = await fetch(`${SERVER_URL}/api/backgrounds`)
       if (res.ok) {
@@ -342,29 +226,11 @@ export default function DrawControl() {
     if (!file) return
     const out = await uploadAsset(file, 'frame')
     setFrame(toServerUrl(out.url))
-
-    // refresh library
     try {
       const res = await fetch(`${SERVER_URL}/api/frames`)
       if (res.ok) {
         const data = await res.json()
         setFrames(Array.isArray(data?.frames) ? data.frames : [])
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  async function onUploadLogo(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    await uploadAsset(file, 'logo')
-    try {
-      const res = await fetch(`${SERVER_URL}/api/logos`)
-      if (res.ok) {
-        const data = await res.json()
-        setLogos(Array.isArray(data?.logos) ? data.logos : [])
       }
     } catch {
       // ignore
@@ -399,80 +265,104 @@ export default function DrawControl() {
   }
 
   useEffect(() => {
-    function onKeyDown(e) {
-      // Undo / Redo
-      const key = String(e.key || '').toLowerCase()
-      const ctrl = e.ctrlKey || e.metaKey
-      if (ctrl && key === 'z') {
-        e.preventDefault()
-        const past = pastRef.current
-        if (!past.length) return
-        setBoxes((current) => {
-          const prevState = past[past.length - 1]
-          pastRef.current = past.slice(0, -1)
-          futureRef.current = [...futureRef.current, current]
-          return prevState
-        })
-        return
-      }
-
-      if (ctrl && key === 'y') {
-        e.preventDefault()
-        const future = futureRef.current
-        if (!future.length) return
-        setBoxes((current) => {
-          const nextState = future[future.length - 1]
-          futureRef.current = future.slice(0, -1)
-          pastRef.current = [...pastRef.current, current]
-          return nextState
-        })
-        return
-      }
-
-      // Fine nudging (bypasses grid snap)
-      if (!selectedId) return
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
-      e.preventDefault()
-      const delta = e.shiftKey ? 10 : 1
-
-      setBoxes((prev) =>
-        prev.map((b) => {
-          if (b.id !== selectedId) return b
-          const nx = b.x + (e.key === 'ArrowLeft' ? -delta : e.key === 'ArrowRight' ? delta : 0)
-          const ny = b.y + (e.key === 'ArrowUp' ? -delta : e.key === 'ArrowDown' ? delta : 0)
-          return {
-            ...b,
-            x: clampInt(nx, 0, BASE_W),
-            y: clampInt(ny, 0, BASE_H)
-          }
-        })
-      )
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedId])
-
-  useEffect(() => {
     const el = wrapRef.current
     if (!el) return
 
     const ro = new ResizeObserver(() => {
       const rect = el.getBoundingClientRect()
-      const s = Math.min(rect.width / BASE_W, rect.height / BASE_H)
-      setScale(clamp(s || 1, 0.1, 0.45))
+      const s = Math.min(rect.width / 1920, rect.height / 1080)
+      setScale(clamp(s || 0.35, 0.1, 1))
     })
 
     ro.observe(el)
     return () => ro.disconnect()
-  }, [sidebarCollapsed])
+  }, [])
 
-  const sortedBoxes = useMemo(() => {
-    return [...boxes].sort((a, b) => Number(a.zIndex ?? 0) - Number(b.zIndex ?? 0))
-  }, [boxes])
+  const selected = useMemo(() => (components || []).find((c) => c.instanceId === selectedId) || null, [components, selectedId])
 
-  function commitZIndices(next) {
-    return next.map((b, idx) => ({ ...b, zIndex: idx }))
+  function updateComponent(next) {
+    setComponents((prev) => prev.map((c) => (c.instanceId === next.instanceId ? next : c)))
+  }
+
+  function deleteComponent(target) {
+    setComponents((prev) => prev.filter((c) => c.instanceId !== target.instanceId))
+    if (selectedId === target.instanceId) setSelectedId(null)
+  }
+
+  function spawnAtom(atomDef) {
+    const base = atomDef?.atom
+    const instanceId = newInstanceId(base)
+    const size = defaultSizeForAtom(base)
+
+    const needsIdx = !!atomDef?.needsIdx
+    const bind = needsIdx ? { idx: 0 } : {}
+
+    const next = normalizeNewComponent(
+      {
+        instanceId,
+        atom: base,
+        x: 0,
+        y: 0,
+        width: size.width,
+        height: size.height,
+        alias: '',
+        visible: true,
+        locked: false,
+        zIndex: (components || []).length,
+        bind
+      },
+      (components || []).length
+    )
+
+    setComponents((prev) => [...prev, next])
+    setSelectedId(instanceId)
+  }
+
+  function handleDropOnCanvas(e) {
+    try {
+      const raw = e.dataTransfer?.getData('application/x-mlbb-atom')
+      if (!raw) return
+      const atomDef = JSON.parse(raw)
+      const base = atomDef?.atom
+      if (!base) return
+
+      // Convert client drop position to layout coordinates
+      const host = wrapRef.current
+      if (!host) return
+      const rect = host.getBoundingClientRect()
+      const cx = e.clientX - rect.left
+      const cy = e.clientY - rect.top
+
+      const x = clampInt(cx / (scale || 1), 0, 1920)
+      const y = clampInt(cy / (scale || 1), 0, 1080)
+
+      const instanceId = newInstanceId(base)
+      const size = defaultSizeForAtom(base)
+      const needsIdx = !!atomDef?.needsIdx
+      const bind = needsIdx ? { idx: 0 } : {}
+
+      const next = normalizeNewComponent(
+        {
+          instanceId,
+          atom: base,
+          x,
+          y,
+          width: size.width,
+          height: size.height,
+          alias: '',
+          visible: true,
+          locked: false,
+          zIndex: (components || []).length,
+          bind
+        },
+        (components || []).length
+      )
+
+      setComponents((prev) => [...prev, next])
+      setSelectedId(instanceId)
+    } catch {
+      // ignore
+    }
   }
 
   return (
@@ -501,7 +391,9 @@ export default function DrawControl() {
             className="rounded-xl border border-white/10 bg-[#1a1a2e] px-3 py-2 text-xs font-bold text-white"
             style={{ backgroundColor: '#1a1a2e' }}
           >
-            <option value="" style={{ backgroundColor: '#1a1a2e' }}>Select Background…</option>
+            <option value="" style={{ backgroundColor: '#1a1a2e' }}>
+              Select Background…
+            </option>
             {backgrounds.map((f) => (
               <option key={f} value={`/Assets/backgrounds/${f}`} style={{ backgroundColor: '#1a1a2e' }}>
                 {f}
@@ -515,7 +407,9 @@ export default function DrawControl() {
             className="rounded-xl border border-white/10 bg-[#1a1a2e] px-3 py-2 text-xs font-bold text-white"
             style={{ backgroundColor: '#1a1a2e' }}
           >
-            <option value="" style={{ backgroundColor: '#1a1a2e' }}>Select Frame…</option>
+            <option value="" style={{ backgroundColor: '#1a1a2e' }}>
+              Select Frame…
+            </option>
             {frames.map((f) => (
               <option key={f} value={`/Assets/frames/${f}`} style={{ backgroundColor: '#1a1a2e' }}>
                 {f}
@@ -535,12 +429,6 @@ export default function DrawControl() {
             <input type="file" accept="image/*" onChange={onUploadFrame} className="hidden" />
           </label>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15">
-            <Upload className="size-4" />
-            LOGO
-            <input type="file" accept="image/*" onChange={onUploadLogo} className="hidden" />
-          </label>
-
           <button
             type="button"
             onClick={() => saveLayout()}
@@ -555,281 +443,37 @@ export default function DrawControl() {
             onClick={() => setAsLiveOverlay()}
             className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
           >
-            <Save className="size-4" />
-            SET AS LIVE OVERLAY
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowGrid((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
-          >
-            {showGrid ? 'HIDE GRID' : 'SHOW GRID'}
+            SET LIVE
           </button>
         </div>
       </div>
 
       <div className="flex h-[calc(100dvh-180px)] w-full gap-3">
+        <ComponentLibrarySidebar onSpawn={spawnAtom} />
+
         <div
-          className={`rounded-2xl border border-white/10 bg-white/5 p-3 overflow-y-auto scrollbar-thin scrollbar-track-black/20 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30 ${
-            sidebarCollapsed ? 'w-[60px]' : 'w-[320px]'
-          }`}
+          ref={wrapRef}
+          className="min-w-0 flex-1"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault()
+            handleDropOnCanvas(e)
+          }}
         >
-          <style>{`
-            .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-            .scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
-            .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
-            .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
-            select, select option { background-color: #1a1a2e !important; color: white !important; }
-            select:focus { background-color: #1a1a2e !important; }
-          `}</style>
-          <div className="mb-2 flex items-center justify-between gap-2">
-            {sidebarCollapsed ? null : (
-              <div className="text-xs font-semibold tracking-[0.22em] text-white/50">LAYER MANAGER</div>
-            )}
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed((v) => !v)}
-              className="rounded-lg bg-white/10 p-2 text-white hover:bg-white/15"
-              title="Collapse sidebar"
-            >
-              {sidebarCollapsed ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            </button>
-          </div>
-
-          <div className="space-y-2" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-            {sortedBoxes.map((b, idx) => {
-              const isSelected = b.id === selectedId
-              const label = String(b.alias || b.id)
-              return (
-                <div
-                  key={b.id}
-                  className={`rounded-xl border px-2 py-2 ${
-                    isSelected ? 'border-[#a78bfa] bg-white/10' : 'border-white/10 bg-black/20'
-                  }`}
-                  onClick={() => setSelectedId(b.id)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      {sidebarCollapsed ? null : (
-                        <>
-                          <div className="truncate text-xs font-extrabold text-white">{label}</div>
-                          <div className="truncate text-[10px] font-semibold text-white/40">{b.id}</div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setBoxes((prev) => prev.map((p) => (p.id === b.id ? { ...p, visible: !p.visible } : p)))
-                        }}
-                        className="rounded-lg bg-white/10 p-2 text-white hover:bg-white/15"
-                        title="Toggle visibility"
-                      >
-                        {b.visible ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setBoxes((prev) => prev.map((p) => (p.id === b.id ? { ...p, locked: !p.locked } : p)))
-                        }}
-                        className="rounded-lg bg-white/10 p-2 text-white hover:bg-white/15"
-                        title="Toggle lock"
-                      >
-                        {b.locked ? <Lock className="size-4" /> : <Unlock className="size-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {sidebarCollapsed ? null : (
-                    <div className="mt-2 grid grid-cols-1 gap-2">
-                    <input
-                      value={b.alias}
-                      onChange={(e) =>
-                        setBoxes((prev) => prev.map((p) => (p.id === b.id ? { ...p, alias: e.target.value } : p)))
-                      }
-                      className="w-full rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-xs font-semibold text-white/90 outline-none"
-                      placeholder="Production alias"
-                    />
-
-                    {String(b.id).toLowerCase().includes('logo') ? (
-                      <select
-                        value={b.src || ''}
-                        onChange={(e) =>
-                          setBoxes((prev) => prev.map((p) => (p.id === b.id ? { ...p, src: e.target.value } : p)))
-                        }
-                        className="rounded-lg border border-white/10 bg-[#1a1a2e] px-2 py-1 text-xs font-bold text-white"
-                        style={{ backgroundColor: '#1a1a2e' }}
-                      >
-                        <option value="" style={{ backgroundColor: '#1a1a2e' }}>Select Logo…</option>
-                        {logos.map((f) => (
-                          <option key={f} value={`/Assets/logos/${f}`} style={{ backgroundColor: '#1a1a2e' }}>
-                            {f}
-                          </option>
-                        ))}
-                      </select>
-                    ) : null}
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (idx === 0) return
-                          setBoxes((prev) => {
-                            const s = [...prev].sort((a, bb) => Number(a.zIndex ?? 0) - Number(bb.zIndex ?? 0))
-                            const i = s.findIndex((x) => x.id === b.id)
-                            if (i <= 0) return prev
-                            const tmp = s[i - 1]
-                            s[i - 1] = s[i]
-                            s[i] = tmp
-                            return commitZIndices(s)
-                          })
-                        }}
-                        className="w-full rounded-lg bg-white/10 px-2 py-1 text-[10px] font-extrabold text-white hover:bg-white/15"
-                      >
-                        MOVE UP
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setBoxes((prev) => {
-                            const s = [...prev].sort((a, bb) => Number(a.zIndex ?? 0) - Number(bb.zIndex ?? 0))
-                            const i = s.findIndex((x) => x.id === b.id)
-                            if (i < 0 || i >= s.length - 1) return prev
-                            const tmp = s[i + 1]
-                            s[i + 1] = s[i]
-                            s[i] = tmp
-                            return commitZIndices(s)
-                          })
-                        }}
-                        className="w-full rounded-lg bg-white/10 px-2 py-1 text-[10px] font-extrabold text-white hover:bg-white/15"
-                      >
-                        MOVE DOWN
-                      </button>
-                    </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <ModularCanvas
+            scale={scale}
+            components={components}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onUpdate={(next) => updateComponent(next)}
+          />
         </div>
 
-        <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 overflow-hidden">
-          <div ref={wrapRef} className="canvas-viewport h-full w-full overflow-hidden">
-            <div
-              className="relative origin-top-left overflow-hidden rounded-xl"
-              style={{
-                width: BASE_W,
-                height: BASE_H,
-                transform: `scale(${scale})`
-              }}
-              onMouseDown={() => setSelectedId(null)}
-            >
-              <div id="bg-layer" className="absolute inset-0" style={{ zIndex: 1 }}>
-                {background ? (
-                  <img
-                    src={background}
-                    alt=""
-                    draggable={false}
-                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0" />
-                )}
-
-                {showGrid ? (
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      backgroundImage:
-                        'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)',
-                      backgroundSize: `${gridSize}px ${gridSize}px`,
-                      opacity: 0.6
-                    }}
-                  />
-                ) : null}
-              </div>
-
-              <div id="component-layer" className="absolute inset-0" style={{ zIndex: 10 }}>
-                {sortedBoxes.map((b) => {
-                  const isSelected = b.id === selectedId
-                  const z = 1 + clampInt(b.zIndex ?? 0, 0, 500)
-                  return (
-                    <Rnd
-                      key={b.id}
-                      bounds="parent"
-                      size={{ width: b.w, height: b.h }}
-                      position={{ x: b.x, y: b.y }}
-                      scale={scale}
-                      dragGrid={[gridSize, gridSize]}
-                      resizeGrid={[gridSize, gridSize]}
-                      disableDragging={!!b.locked}
-                      enableResizing={!b.locked}
-                      onMouseDown={(e) => {
-                        e.stopPropagation()
-                        setSelectedId(b.id)
-                      }}
-                      onDragStop={(e, d) => {
-                        const nx = snap(d.x, gridSize)
-                        const ny = snap(d.y, gridSize)
-                        setBoxes((prev) => {
-                          pastRef.current = [...pastRef.current, prev]
-                          futureRef.current = []
-                          return prev.map((p) => (p.id === b.id ? { ...p, x: nx, y: ny } : p))
-                        })
-                      }}
-                      onResizeStop={(e, dir, ref, delta, pos) => {
-                        const w = snap(ref.offsetWidth, gridSize)
-                        const h = snap(ref.offsetHeight, gridSize)
-                        const x = snap(pos.x, gridSize)
-                        const y = snap(pos.y, gridSize)
-                        setBoxes((prev) => {
-                          pastRef.current = [...pastRef.current, prev]
-                          futureRef.current = []
-                          return prev.map((p) => (p.id === b.id ? { ...p, x, y, w, h } : p))
-                        })
-                      }}
-                      style={{
-                        zIndex: z,
-                        opacity: b.visible ? 1 : 0
-                      }}
-                    >
-                      <div
-                        className={`h-full w-full overflow-hidden rounded-lg border ${
-                          isSelected ? 'border-[#a78bfa]' : 'border-white/10'
-                        } bg-[#1a1625]/70`}
-                      >
-                        <SmartBox box={b} matchState={matchState} />
-                      </div>
-                    </Rnd>
-                  )
-                })}
-              </div>
-
-              <div
-                id="frame-layer"
-                className="absolute inset-0 pointer-events-none"
-                style={{ zIndex: 100 }}
-              >
-                {frame ? (
-                  <img
-                    src={frame}
-                    alt=""
-                    draggable={false}
-                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
+        <LayerProperties
+          selected={selected}
+          onChange={(next) => updateComponent(next)}
+          onDelete={(t) => deleteComponent(t)}
+        />
       </div>
     </div>
   )

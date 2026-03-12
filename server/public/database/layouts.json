@@ -1,0 +1,14 @@
+{
+  "testing": {
+    "name": "testing",
+    "background": "",
+    "frame": "",
+    "components": []
+  },
+  "default_draft": {
+    "name": "default_draft",
+    "background": "",
+    "frame": "",
+    "components": []
+  }
+}

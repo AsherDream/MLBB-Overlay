@@ -29,19 +29,38 @@ const layoutComponentSchema = z.preprocess((val) => {
   if (typeof v.width !== 'number' && typeof v.w === 'number') v.width = v.w;
   if (typeof v.height !== 'number' && typeof v.h === 'number') v.height = v.h;
   return v;
-}, z.object({
-  id: z.string().min(1, 'Component id cannot be empty'),
-  type: z.enum(['text', 'image']).default('text'),
-  x: z.number(),
-  y: z.number(),
-  width: z.number().positive(),
-  height: z.number().positive(),
-  visible: z.boolean().optional().default(true),
-  locked: z.boolean().optional().default(false),
-  alias: z.string().optional().default(''),
-  zIndex: z.number().int().optional(),
-  src: z.string().optional().default('')
-}));
+}, z.union([
+  // Legacy shape (id/type driven)
+  z.object({
+    id: z.string().min(1, 'Component id cannot be empty'),
+    type: z.enum(['text', 'image']).default('text'),
+    x: z.number(),
+    y: z.number(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    visible: z.boolean().optional().default(true),
+    locked: z.boolean().optional().default(false),
+    alias: z.string().optional().default(''),
+    zIndex: z.number().int().optional(),
+    src: z.string().optional().default('')
+  }),
+
+  // New component-driven shape (atom + bind driven)
+  z.object({
+    instanceId: z.string().min(1, 'instanceId cannot be empty'),
+    atom: z.string().min(1, 'atom cannot be empty'),
+    x: z.number(),
+    y: z.number(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    visible: z.boolean().optional().default(true),
+    locked: z.boolean().optional().default(false),
+    alias: z.string().optional().default(''),
+    zIndex: z.number().int().optional(),
+    src: z.string().optional().default(''),
+    bind: z.object({}).passthrough().optional().default({})
+  })
+]));
 
 const layoutSchema = z.object({
   name: z.string().default(''),

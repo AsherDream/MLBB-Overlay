@@ -1,0 +1,958 @@
+{
+  "generatedAt": "2026-02-25T10:22:24.797Z",
+  "source": "server/public/Assets",
+  "heroes": [
+    {
+      "id": "aamon",
+      "name": "Aamon",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "akai",
+      "name": "Akai",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "aldous",
+      "name": "Aldous",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "alice",
+      "name": "Alice",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "alpha",
+      "name": "Alpha",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "alucard",
+      "name": "Alucard",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "angela",
+      "name": "Angela",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "argus",
+      "name": "Argus",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "arlot",
+      "name": "Arlot",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "aulus",
+      "name": "Aulus",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "badang",
+      "name": "Badang",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "balmond",
+      "name": "Balmond",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "bane",
+      "name": "Bane",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "barats",
+      "name": "Barats",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "baxia",
+      "name": "Baxia",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "beatrix",
+      "name": "Beatrix",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "beleric",
+      "name": "Beleric",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "benedetta",
+      "name": "Benedetta",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "brody",
+      "name": "Brody",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "bruno",
+      "name": "Bruno",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "carmila",
+      "name": "Carmila",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "cecilion",
+      "name": "Cecilion",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "chang_e",
+      "name": "Chang E",
+      "hasPortrait": true,
+      "hasVoice": false,
+      "hasAsset": true
+    },
+    {
+      "id": "chang'e",
+      "name": "Chang'e",
+      "hasPortrait": true,
+      "hasVoice": false,
+      "hasAsset": true
+    },
+    {
+      "id": "change",
+      "name": "Change",
+      "hasPortrait": false,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "chip",
+      "name": "Chip",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "chou",
+      "name": "Chou",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "cici",
+      "name": "Cici",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "claude",
+      "name": "Claude",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "clint",
+      "name": "Clint",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "cyclops",
+      "name": "Cyclops",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "diggie",
+      "name": "Diggie",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "dyroth",
+      "name": "Dyroth",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "edith",
+      "name": "Edith",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "esmeralda",
+      "name": "Esmeralda",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "estes",
+      "name": "Estes",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "eudora",
+      "name": "Eudora",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "fanny",
+      "name": "Fanny",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "faramis",
+      "name": "Faramis",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "floryn",
+      "name": "Floryn",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "franco",
+      "name": "Franco",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "fredrin",
+      "name": "Fredrin",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "freya",
+      "name": "Freya",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "gatotkaca",
+      "name": "Gatotkaca",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "gloo",
+      "name": "Gloo",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "gord",
+      "name": "Gord",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "granger",
+      "name": "Granger",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "grock",
+      "name": "Grock",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "guinevere",
+      "name": "Guinevere",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "gusion",
+      "name": "Gusion",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "hanabi",
+      "name": "Hanabi",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "hanzo",
+      "name": "Hanzo",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "harith",
+      "name": "Harith",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "harley",
+      "name": "Harley",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "hayabusa",
+      "name": "Hayabusa",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "helcurt",
+      "name": "Helcurt",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "hilda",
+      "name": "Hilda",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "hylos",
+      "name": "Hylos",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "idle",
+      "name": "Idle",
+      "hasPortrait": true,
+      "hasVoice": false,
+      "hasAsset": true
+    },
+    {
+      "id": "irithel",
+      "name": "Irithel",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "ixia",
+      "name": "Ixia",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "jawhead",
+      "name": "Jawhead",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "johnson",
+      "name": "Johnson",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "joy",
+      "name": "Joy",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "julian",
+      "name": "Julian",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "kadita",
+      "name": "Kadita",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "kagura",
+      "name": "Kagura",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "kaja",
+      "name": "Kaja",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "kalea",
+      "name": "Kalea",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "karina",
+      "name": "Karina",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "karrie",
+      "name": "Karrie",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "khaleed",
+      "name": "Khaleed",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "khufra",
+      "name": "Khufra",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "kimmy",
+      "name": "Kimmy",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lancelot",
+      "name": "Lancelot",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lapu lapu",
+      "name": "Lapu Lapu",
+      "hasPortrait": true,
+      "hasVoice": false,
+      "hasAsset": true
+    },
+    {
+      "id": "lapulapu",
+      "name": "Lapulapu",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "layla",
+      "name": "Layla",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "leomord",
+      "name": "Leomord",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lesley",
+      "name": "Lesley",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "ling",
+      "name": "Ling",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lolita",
+      "name": "Lolita",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lukas",
+      "name": "Lukas",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lunox",
+      "name": "Lunox",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "luoyi",
+      "name": "Luoyi",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "lylia",
+      "name": "Lylia",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "martis",
+      "name": "Martis",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "masha",
+      "name": "Masha",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "mathilda",
+      "name": "Mathilda",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "melissa",
+      "name": "Melissa",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "minotour",
+      "name": "Minotour",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "minsitthar",
+      "name": "Minsitthar",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "miya",
+      "name": "Miya",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "moskov",
+      "name": "Moskov",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "nana",
+      "name": "Nana",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "natalia",
+      "name": "Natalia",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "natan",
+      "name": "Natan",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "nolan",
+      "name": "Nolan",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "novaria",
+      "name": "Novaria",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "obsidia",
+      "name": "Obsidia",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "odette",
+      "name": "Odette",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "paquito",
+      "name": "Paquito",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "parsha",
+      "name": "Parsha",
+      "hasPortrait": false,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "pharsa",
+      "name": "Pharsa",
+      "hasPortrait": true,
+      "hasVoice": false,
+      "hasAsset": true
+    },
+    {
+      "id": "phoveus",
+      "name": "Phoveus",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "popolandkupa",
+      "name": "Popolandkupa",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "rafaela",
+      "name": "Rafaela",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "roger",
+      "name": "Roger",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "ruby",
+      "name": "Ruby",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "saber",
+      "name": "Saber",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "selena",
+      "name": "Selena",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "silvanna",
+      "name": "Silvanna",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "sora",
+      "name": "Sora",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "sun",
+      "name": "Sun",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "suyou",
+      "name": "Suyou",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "terizla",
+      "name": "Terizla",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "thamuz",
+      "name": "Thamuz",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "tigreal",
+      "name": "Tigreal",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "uranus",
+      "name": "Uranus",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "vale",
+      "name": "Vale",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "valentina",
+      "name": "Valentina",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "valir",
+      "name": "Valir",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "vexana",
+      "name": "Vexana",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "wanwan",
+      "name": "Wanwan",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "xavier",
+      "name": "Xavier",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "xborg",
+      "name": "Xborg",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "yin",
+      "name": "Yin",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "yisunshin",
+      "name": "Yisunshin",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "yuzhong",
+      "name": "Yuzhong",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "yve",
+      "name": "Yve",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "zetian",
+      "name": "Zetian",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "zhask",
+      "name": "Zhask",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "zhuxin",
+      "name": "Zhuxin",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    },
+    {
+      "id": "zilong",
+      "name": "Zilong",
+      "hasPortrait": true,
+      "hasVoice": true,
+      "hasAsset": true
+    }
+  ]
+}
