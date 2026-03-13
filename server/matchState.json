@@ -1,6 +1,6 @@
 {
   "blueTeam": {
-    "name": "Blue Team",
+    "name": "TEAM BLUE",
     "score": 0,
     "players": [
       "",
@@ -10,22 +10,17 @@
       ""
     ],
     "picks": [
-      "none",
-      "none",
-      "none",
-      "none",
-      "none"
+      "Barats",
+      "Saber",
+      "Argus",
+      "Roger",
+      "Aurora"
     ],
-    "bans": [
-      "none",
-      "none",
-      "none",
-      "none",
-      "none"
-    ]
+    "bans": [],
+    "logo": "default_logo.png"
   },
   "redTeam": {
-    "name": "Red Team",
+    "name": "TEAM RED",
     "score": 0,
     "players": [
       "",
@@ -34,23 +29,11 @@
       "",
       ""
     ],
-    "picks": [
-      "none",
-      "none",
-      "none",
-      "none",
-      "none"
-    ],
-    "bans": [
-      "none",
-      "none",
-      "none",
-      "none",
-      "none"
-    ]
+    "picks": [],
+    "bans": [],
+    "logo": "default_logo.png"
   },
-  "map": "none",
-  "mapType": "none",
-  "activeLayout": "default_draft",
-  "phase": "draft"
+  "map": "The Land of Dawn",
+  "phase": "draft",
+  "activeLayout": "testing"
 }

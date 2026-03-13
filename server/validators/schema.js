@@ -1,79 +1,58 @@
 const { z } = require('zod');
 
-const heroSchema = z.string().min(1, "Hero name cannot be empty");
-
-const playerSchema = z.string().default('');
-
-const teamSchema = z.object({
-  name: z.string().min(1, "Team name cannot be empty"),
-  score: z.number().int().min(0).default(0),
-  players: z.array(playerSchema).length(5).default([
-    '', '', '', '', ''
+// 1. Atom Schema (The individual UI components)
+const componentSchema = z.object({
+  instanceId: z.string(),
+  atom: z.enum([
+    'T1_NAME', 'T1_SCORE', 'T1_PLAYER_NAME', 'T1_PICK', 'T1_BAN', 'T1_LOGO',
+    'T2_NAME', 'T2_SCORE', 'T2_PLAYER_NAME', 'T2_PICK', 'T2_BAN', 'T2_LOGO',
+    'MAP', 'CUSTOM_TEXT', 'CUSTOM_IMAGE'
   ]),
-  picks: z.array(heroSchema).length(5).default(["none", "none", "none", "none", "none"]),
-  bans: z.array(heroSchema).length(5).default(["none", "none", "none", "none", "none"])
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  visible: z.boolean().default(true),
+  locked: z.boolean().default(false),
+  zIndex: z.number().default(1),
+  bind: z.object({
+    idx: z.number().optional(), // Maps to array index 0-9
+  }).optional(),
+  // Diagonal Masking
+  maskPoints: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+  // Panning/Zoom for "Focus Mode"
+  crop: z.object({ x: z.number(), y: z.number(), scale: z.number() }).default({ x: 0, y: 0, scale: 1 })
 });
 
+// 2. Flexible Match State Schema
 const matchStateSchema = z.object({
-  blueTeam: teamSchema,
-  redTeam: teamSchema,
-  map: z.string().default('none'),
-  mapType: z.string().default('none'),
-  activeLayout: z.string().default('default_draft'),
-  phase: z.enum(["draft", "game", "ended"]).default("draft")
+  blueTeam: z.object({
+    name: z.string().default('TEAM BLUE'),
+    score: z.number().min(0).default(0),
+    players: z.array(z.string()).default(['', '', '', '', '']),
+    picks: z.array(z.string()).max(5).default([]), // Dynamic 1-by-1 entry
+    bans: z.array(z.string()).max(10).default([]), // Flexible ban count
+    logo: z.string().default('default_logo.png'),
+  }).default({}),
+  redTeam: z.object({
+    name: z.string().default('TEAM RED'),
+    score: z.number().min(0).default(0),
+    players: z.array(z.string()).default(['', '', '', '', '']),
+    picks: z.array(z.string()).max(5).default([]),
+    bans: z.array(z.string()).max(10).default([]),
+    logo: z.string().default('default_logo.png'),
+  }).default({}),
+  map: z.string().default('The Land of Dawn'),
+  phase: z.enum(['draft', 'game', 'ended']).default('draft'),
+  activeLayout: z.string().default('testing'),
 });
 
-const layoutComponentSchema = z.preprocess((val) => {
-  if (!val || typeof val !== 'object') return val;
-  const v = val;
-  if (typeof v.width !== 'number' && typeof v.w === 'number') v.width = v.w;
-  if (typeof v.height !== 'number' && typeof v.h === 'number') v.height = v.h;
-  return v;
-}, z.union([
-  // Legacy shape (id/type driven)
-  z.object({
-    id: z.string().min(1, 'Component id cannot be empty'),
-    type: z.enum(['text', 'image']).default('text'),
-    x: z.number(),
-    y: z.number(),
-    width: z.number().positive(),
-    height: z.number().positive(),
-    visible: z.boolean().optional().default(true),
-    locked: z.boolean().optional().default(false),
-    alias: z.string().optional().default(''),
-    zIndex: z.number().int().optional(),
-    src: z.string().optional().default('')
-  }),
-
-  // New component-driven shape (atom + bind driven)
-  z.object({
-    instanceId: z.string().min(1, 'instanceId cannot be empty'),
-    atom: z.string().min(1, 'atom cannot be empty'),
-    x: z.number(),
-    y: z.number(),
-    width: z.number().positive(),
-    height: z.number().positive(),
-    visible: z.boolean().optional().default(true),
-    locked: z.boolean().optional().default(false),
-    alias: z.string().optional().default(''),
-    zIndex: z.number().int().optional(),
-    src: z.string().optional().default(''),
-    bind: z.object({}).passthrough().optional().default({})
-  })
-]));
-
+// 3. Layout Schema
 const layoutSchema = z.object({
-  name: z.string().default(''),
-  background: z.string().default(''),
-  frame: z.string().default(''),
-  components: z.array(layoutComponentSchema).default([])
+  name: z.string(),
+  background: z.string().default('default_bg.jpg'),
+  frame: z.string().default('master_frame.png'),
+  components: z.array(componentSchema).default([]),
 });
 
-module.exports = {
-  matchStateSchema,
-  teamSchema,
-  heroSchema,
-  playerSchema,
-  layoutSchema,
-  layoutComponentSchema
-};
+module.exports = { matchStateSchema, layoutSchema, componentSchema };

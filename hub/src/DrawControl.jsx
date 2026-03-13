@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom'
 import { Save, Upload } from 'lucide-react'
 import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
@@ -33,9 +33,51 @@ function clampInt(n, min, max) {
   return Math.max(min, Math.min(max, Math.round(x)))
 }
 
+function classifyAtom(atom) {
+  const a = String(atom || '')
+  let side = null
+  if (a.startsWith('T1_')) side = 'T1'
+  else if (a.startsWith('T2_')) side = 'T2'
+
+  let kind = null
+  if (a.endsWith('PLAYER_NAME')) kind = 'PLAYER_NAME'
+  else if (a.endsWith('PICK')) kind = 'PICK'
+  else if (a.endsWith('BAN')) kind = 'BAN'
+  else if (a.endsWith('SCORE')) kind = 'SCORE'
+  else if (a.endsWith('NAME')) kind = 'NAME'
+
+  return { side, kind }
+}
+
 function normalizeNewComponent(c, fallbackZ) {
   const size = defaultSizeForAtom(c?.atom)
-  const bind = c?.bind && typeof c.bind === 'object' ? c.bind : {}
+  const rawBind = c?.bind && typeof c.bind === 'object' ? c.bind : {}
+  const { kind } = classifyAtom(c?.atom)
+
+  let bind = rawBind
+  if (kind === 'PLAYER_NAME' || kind === 'PICK' || kind === 'BAN') {
+    const n = Number(rawBind.idx)
+    const clamped = Number.isFinite(n) ? clampInt(n, 0, 4) : 0
+    bind = { ...rawBind, idx: clamped }
+  } else {
+    bind = rawBind
+  }
+  const crop =
+    c?.crop && typeof c.crop === 'object'
+      ? {
+          x: Number.isFinite(c.crop.x) ? c.crop.x : 0,
+          y: Number.isFinite(c.crop.y) ? c.crop.y : 0,
+          scale: Number.isFinite(c.crop.scale) && c.crop.scale > 0 ? c.crop.scale : 1
+        }
+      : { x: 0, y: 0, scale: 1 }
+  const maskPoints =
+    Array.isArray(c?.maskPoints) && c.maskPoints.length
+      ? c.maskPoints.map((p) => ({
+          x: Number.isFinite(p.x) ? p.x : 0,
+          y: Number.isFinite(p.y) ? p.y : 0
+        }))
+      : undefined
+
   return {
     instanceId: String(c?.instanceId || newInstanceId(c?.atom || 'ATOM')),
     atom: String(c?.atom || ''),
@@ -48,7 +90,9 @@ function normalizeNewComponent(c, fallbackZ) {
     alias: typeof c?.alias === 'string' ? c.alias : '',
     zIndex: typeof c?.zIndex === 'number' ? c.zIndex : fallbackZ,
     src: typeof c?.src === 'string' ? c.src : '',
-    bind
+    bind,
+    crop,
+    maskPoints
   }
 }
 
@@ -66,6 +110,22 @@ export default function DrawControl() {
   const [frame, setFrame] = useState('')
   const [backgrounds, setBackgrounds] = useState([])
   const [frames, setFrames] = useState([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [toast, setToast] = useState(null)
+  const toastTimeoutRef = useRef(null)
+
+  function showToast(message) {
+    if (!message) return
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current)
+      toastTimeoutRef.current = null
+    }
+    setToast(message)
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast(null)
+      toastTimeoutRef.current = null
+    }, 2000)
+  }
 
   useEffect(() => {
     let mounted = true
@@ -172,12 +232,22 @@ export default function DrawControl() {
       mounted = false
     }
   }, [])
-  const payload = useMemo(() => {
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  function buildPayload(nextComponents) {
+    const list = nextComponents || components || []
     return {
       name: layoutName,
       background: toRelativeAssetsPath(background),
       frame: toRelativeAssetsPath(frame),
-      components: (components || []).map((c, idx) => ({
+      components: list.map((c, idx) => ({
         instanceId: String(c.instanceId),
         atom: String(c.atom),
         x: Math.round(c.x),
@@ -189,10 +259,25 @@ export default function DrawControl() {
         alias: String(c.alias || ''),
         zIndex: typeof c.zIndex === 'number' ? c.zIndex : idx,
         src: String(c.src || ''),
-        bind: c.bind && typeof c.bind === 'object' ? c.bind : {}
+        bind: c.bind && typeof c.bind === 'object' ? c.bind : {},
+        crop:
+          c.crop && typeof c.crop === 'object'
+            ? {
+                x: Number.isFinite(c.crop.x) ? Math.round(c.crop.x) : 0,
+                y: Number.isFinite(c.crop.y) ? Math.round(c.crop.y) : 0,
+                scale: Number.isFinite(c.crop.scale) && c.crop.scale > 0 ? c.crop.scale : 1
+              }
+            : { x: 0, y: 0, scale: 1 },
+        maskPoints:
+          Array.isArray(c.maskPoints) && c.maskPoints.length
+            ? c.maskPoints.map((p) => ({
+                x: Number.isFinite(p.x) ? Math.round(p.x) : 0,
+                y: Number.isFinite(p.y) ? Math.round(p.y) : 0
+              }))
+            : undefined
       }))
     }
-  }, [layoutName, components])
+  }
 
   async function uploadAsset(file, category) {
     const fd = new FormData()
@@ -237,15 +322,19 @@ export default function DrawControl() {
     }
   }
 
-  async function saveLayout() {
+  async function saveLayout(explicitComponents) {
     const id = String(layoutName || '').trim()
     if (!id) throw new Error('Layout Name is required')
 
+    const body = JSON.stringify(buildPayload(explicitComponents || components))
+
+    setIsSaving(true)
     const res = await fetch(`${SERVER_URL}/api/layouts/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body
     })
+    setIsSaving(false)
     if (!res.ok) {
       const txt = await res.text()
       throw new Error(txt)
@@ -280,22 +369,92 @@ export default function DrawControl() {
 
   const selected = useMemo(() => (components || []).find((c) => c.instanceId === selectedId) || null, [components, selectedId])
 
+  function computeSpawnBindingAndCheckLimit(baseAtom) {
+    const { side, kind } = classifyAtom(baseAtom)
+    if (!side || !kind) {
+      return { ok: true, bind: {} }
+    }
+
+    const needsIdx = kind === 'PLAYER_NAME' || kind === 'PICK' || kind === 'BAN'
+    let limit = Infinity
+    if (kind === 'PLAYER_NAME' || kind === 'PICK' || kind === 'BAN') {
+      limit = 5
+    } else if (kind === 'SCORE' || kind === 'NAME') {
+      limit = 1
+    }
+
+    const existing = (components || []).filter((c) => {
+      const meta = classifyAtom(c.atom)
+      return meta.side === side && meta.kind === kind
+    })
+
+    if (existing.length >= limit) {
+      const label =
+        kind === 'PICK'
+          ? 'Picks'
+          : kind === 'BAN'
+            ? 'Bans'
+            : kind === 'PLAYER_NAME'
+              ? 'Player Names'
+              : kind === 'SCORE'
+                ? 'Score'
+                : 'Team Name'
+      const sideLabel = side === 'T1' ? 'Blue' : 'Red'
+      showToast(`Maximum of ${limit} ${label} allowed for ${sideLabel} team.`)
+      return { ok: false, bind: {} }
+    }
+
+    if (!needsIdx) {
+      return { ok: true, bind: {} }
+    }
+
+    const usedIdx = new Set(
+      existing
+        .map((c) => {
+          const b = c.bind && typeof c.bind === 'object' ? c.bind : {}
+          const n = Number(b.idx)
+          return Number.isFinite(n) ? clampInt(n, 0, 4) : null
+        })
+        .filter((v) => v != null)
+    )
+
+    let nextIdx = 0
+    for (let i = 0; i < 5; i += 1) {
+      if (!usedIdx.has(i)) {
+        nextIdx = i
+        break
+      }
+    }
+
+    return { ok: true, bind: { idx: nextIdx } }
+  }
+
   function updateComponent(next) {
-    setComponents((prev) => prev.map((c) => (c.instanceId === next.instanceId ? next : c)))
+    setComponents((prev) => {
+      const updated = prev.map((c) => (c.instanceId === next.instanceId ? next : c))
+      // Real-time persistence on drag/resize/property change
+      // Fire-and-forget; errors are logged in the network layer/devtools.
+      saveLayout(updated).catch(() => {})
+      return updated
+    })
   }
 
   function deleteComponent(target) {
-    setComponents((prev) => prev.filter((c) => c.instanceId !== target.instanceId))
+    setComponents((prev) => {
+      const updated = prev.filter((c) => c.instanceId !== target.instanceId)
+      saveLayout(updated).catch(() => {})
+      return updated
+    })
     if (selectedId === target.instanceId) setSelectedId(null)
   }
 
   function spawnAtom(atomDef) {
     const base = atomDef?.atom
+    const { ok, bind } = computeSpawnBindingAndCheckLimit(base)
+    if (!ok) return
+
     const instanceId = newInstanceId(base)
     const size = defaultSizeForAtom(base)
-
-    const needsIdx = !!atomDef?.needsIdx
-    const bind = needsIdx ? { idx: 0 } : {}
 
     const next = normalizeNewComponent(
       {
@@ -326,6 +485,9 @@ export default function DrawControl() {
       const base = atomDef?.atom
       if (!base) return
 
+      const { ok, bind } = computeSpawnBindingAndCheckLimit(base)
+      if (!ok) return
+
       // Convert client drop position to layout coordinates
       const host = wrapRef.current
       if (!host) return
@@ -338,9 +500,6 @@ export default function DrawControl() {
 
       const instanceId = newInstanceId(base)
       const size = defaultSizeForAtom(base)
-      const needsIdx = !!atomDef?.needsIdx
-      const bind = needsIdx ? { idx: 0 } : {}
-
       const next = normalizeNewComponent(
         {
           instanceId,
@@ -435,7 +594,7 @@ export default function DrawControl() {
             className="inline-flex items-center gap-2 rounded-xl bg-[#7c3aed] px-3 py-2 text-xs font-bold text-white hover:bg-[#6d28d9]"
           >
             <Save className="size-4" />
-            SAVE LAYOUT
+            {isSaving ? 'SAVING…' : 'SAVE LAYOUT'}
           </button>
 
           <button

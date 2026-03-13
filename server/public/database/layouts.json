@@ -1,12 +1,140 @@
 {
-  "testing": {
-    "name": "testing",
-    "background": "",
-    "frame": "",
-    "components": []
-  },
   "default_draft": {
     "name": "default_draft",
+    "background": "/Assets/backgrounds/Blurred_bg.jpg",
+    "frame": "/Assets/frames/Draft_pick_frame.png",
+    "components": [
+      {
+        "instanceId": "T1_NAME_1773376064550_1e1373e88f8e38",
+        "atom": "T1_NAME",
+        "x": 54,
+        "y": 133,
+        "width": 484,
+        "height": 268,
+        "visible": true,
+        "locked": false,
+        "zIndex": 0,
+        "bind": {},
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_SCORE_1773376082603_07261be0a8f7e",
+        "atom": "T1_SCORE",
+        "x": 9,
+        "y": 0,
+        "width": 80,
+        "height": 40,
+        "visible": true,
+        "locked": false,
+        "zIndex": 1,
+        "bind": {},
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_PICK_1773376085549_827348b2bed7",
+        "atom": "T1_PICK",
+        "x": 82,
+        "y": 615,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 2,
+        "bind": {
+          "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_LOGO_1773376111797_89d735dccbeb28",
+        "atom": "T1_LOGO",
+        "x": 867,
+        "y": 848,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 3,
+        "bind": {},
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_PICK_1773376118808_fca7f3f2581bb8",
+        "atom": "T1_PICK",
+        "x": 254,
+        "y": 621,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 4,
+        "bind": {
+          "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_PICK_1773376119332_a27b79a26af3a8",
+        "atom": "T1_PICK",
+        "x": 408,
+        "y": 617,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 5,
+        "bind": {
+          "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_PICK_1773376140138_f68db8ef2b96a8",
+        "atom": "T1_PICK",
+        "x": 555,
+        "y": 615,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 6,
+        "bind": {
+          "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      }
+    ]
+  },
+  "testing": {
+    "name": "testing",
     "background": "",
     "frame": "",
     "components": []

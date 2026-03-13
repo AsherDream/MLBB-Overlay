@@ -18,6 +18,24 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
 
   const bind = selected.bind && typeof selected.bind === 'object' ? selected.bind : {}
   const idx = clampInt(bind.idx ?? 0, 0, 4)
+  const crop =
+    selected.crop && typeof selected.crop === 'object'
+      ? {
+          x: Number.isFinite(selected.crop.x) ? selected.crop.x : 0,
+          y: Number.isFinite(selected.crop.y) ? selected.crop.y : 0,
+          scale: Number.isFinite(selected.crop.scale) && selected.crop.scale > 0 ? selected.crop.scale : 1
+        }
+      : { x: 0, y: 0, scale: 1 }
+
+  const baseMask =
+    Array.isArray(selected.maskPoints) && selected.maskPoints.length >= 4
+      ? selected.maskPoints.slice(0, 4)
+      : [
+          { x: 0, y: 0 },
+          { x: selected.width ?? 0, y: 0 },
+          { x: selected.width ?? 0, y: selected.height ?? 0 },
+          { x: 0, y: selected.height ?? 0 }
+        ]
 
   return (
     <aside className="h-full w-[320px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -86,7 +104,21 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
           </label>
         </div>
 
-        {String(selected.atom || '').includes('PLAYER_NAME') || String(selected.atom || '').includes('PICK') || String(selected.atom || '').includes('BAN') ? (
+        <SmartInput
+          label="Z-Index"
+          type="number"
+          value={selected.zIndex ?? 0}
+          onDebouncedChange={(v) =>
+            onChange?.({
+              ...selected,
+              zIndex: clampInt(Number(v), -999, 999)
+            })
+          }
+        />
+
+        {String(selected.atom || '').includes('PLAYER_NAME') ||
+        String(selected.atom || '').includes('PICK') ||
+        String(selected.atom || '').includes('BAN') ? (
           <div className="rounded-xl border border-white/10 bg-black/20 p-3">
             <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">BINDING</div>
             <div className="mt-2">
@@ -111,6 +143,104 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
             </div>
           </div>
         ) : null}
+
+        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+          <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">FOCUS MODE (CROP)</div>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            <SmartInput
+              label="X"
+              type="number"
+              value={crop.x}
+              onDebouncedChange={(v) =>
+                onChange?.({
+                  ...selected,
+                  crop: {
+                    ...crop,
+                    x: clampInt(Number(v), -1000, 1000)
+                  }
+                })
+              }
+            />
+            <SmartInput
+              label="Y"
+              type="number"
+              value={crop.y}
+              onDebouncedChange={(v) =>
+                onChange?.({
+                  ...selected,
+                  crop: {
+                    ...crop,
+                    y: clampInt(Number(v), -1000, 1000)
+                  }
+                })
+              }
+            />
+            <SmartInput
+              label="Scale"
+              type="number"
+              value={crop.scale}
+              onDebouncedChange={(v) => {
+                const raw = Number(v)
+                const safe = Number.isFinite(raw) && raw > 0 ? raw : 1
+                onChange?.({
+                  ...selected,
+                  crop: {
+                    ...crop,
+                    scale: Math.max(0.1, Math.min(4, safe))
+                  }
+                })
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+          <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">SMART-FRAME MASK (4 POINTS)</div>
+          <div className="mt-2 space-y-2 text-[11px] text-white/70">
+            {baseMask.map((p, i) => (
+              <div key={i} className="grid grid-cols-2 gap-2">
+                <SmartInput
+                  label={`P${i + 1} X`}
+                  type="number"
+                  value={p.x}
+                  onDebouncedChange={(v) => {
+                    const next = baseMask.map((pt, idx) =>
+                      idx === i
+                        ? {
+                            ...pt,
+                            x: clampInt(Number(v), -1000, 3000)
+                          }
+                        : pt
+                    )
+                    onChange?.({
+                      ...selected,
+                      maskPoints: next
+                    })
+                  }}
+                />
+                <SmartInput
+                  label={`P${i + 1} Y`}
+                  type="number"
+                  value={p.y}
+                  onDebouncedChange={(v) => {
+                    const next = baseMask.map((pt, idx) =>
+                      idx === i
+                        ? {
+                            ...pt,
+                            y: clampInt(Number(v), -1000, 3000)
+                          }
+                        : pt
+                    )
+                    onChange?.({
+                      ...selected,
+                      maskPoints: next
+                    })
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         <button
           type="button"

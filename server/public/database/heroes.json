@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-25T10:22:24.797Z",
-  "source": "server/public/Assets",
+  "generatedAt": "2026-03-13T04:29:05.899Z",
+  "source": "public/Assets/HeroPick + VoiceLines",
   "heroes": [
     {
       "id": "aamon",
@@ -171,23 +171,9 @@
       "hasAsset": true
     },
     {
-      "id": "chang_e",
-      "name": "Chang E",
-      "hasPortrait": true,
-      "hasVoice": false,
-      "hasAsset": true
-    },
-    {
-      "id": "chang'e",
-      "name": "Chang'e",
-      "hasPortrait": true,
-      "hasVoice": false,
-      "hasAsset": true
-    },
-    {
       "id": "change",
       "name": "Change",
-      "hasPortrait": false,
+      "hasPortrait": true,
       "hasVoice": true,
       "hasAsset": true
     },
@@ -731,17 +717,10 @@
       "hasAsset": true
     },
     {
-      "id": "parsha",
-      "name": "Parsha",
-      "hasPortrait": false,
-      "hasVoice": true,
-      "hasAsset": true
-    },
-    {
       "id": "pharsa",
       "name": "Pharsa",
       "hasPortrait": true,
-      "hasVoice": false,
+      "hasVoice": true,
       "hasAsset": true
     },
     {
