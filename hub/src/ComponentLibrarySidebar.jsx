@@ -2,7 +2,7 @@ import { ATOMS } from './atoms.js'
 
 export default function ComponentLibrarySidebar({ onSpawn }) {
   return (
-    <aside className="h-full w-[260px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+    <aside className="relative z-10 h-full w-[260px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
       <div className="mb-3 text-xs font-semibold tracking-[0.22em] text-white/50">COMPONENT LIBRARY</div>
       <div className="space-y-2">
         {ATOMS.map((a) => (

@@ -277,6 +277,10 @@ function setImageIfExists(id, src, visible) {
   if (lastValues.get(srcKey) !== nextSrc) {
     const finalSrc = nextSrc && nextSrc !== TRANSPARENT_PX ? cacheBust(nextSrc) : nextSrc;
     img.src = finalSrc;
+
+    img.style.width = '100%';
+    img.style.height = '100%';
+
     img.onerror = () => {
       img.src = TRANSPARENT_PX;
       img.onerror = null;

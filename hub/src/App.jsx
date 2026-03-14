@@ -1,5 +1,10 @@
-import { useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { Route, Routes, useNavigate } from 'react-router-dom'
+
+const LayoutContext = createContext({ sidebarCollapsed: false })
+export function useLayout() {
+  return useContext(LayoutContext)
+}
 import Sidebar from './Sidebar.jsx'
 import HubCard from './HubCard.jsx'
 import ControlPanel from './ControlPanel.jsx'
@@ -112,13 +117,15 @@ export default function App() {
         className="min-h-dvh transition-[margin] duration-200"
         style={{ marginLeft: sidebarCollapsed ? 60 : 280 }}
       >
-        <Routes>
+        <LayoutContext.Provider value={{ sidebarCollapsed }}>
+          <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/control" element={<ControlPanel />} />
           <Route path="/layouts" element={<LayoutManager />} />
           <Route path="/draw/:id" element={<DrawControl />} />
           <Route path="/display" element={<DisplayOverlayPage />} />
         </Routes>
+        </LayoutContext.Provider>
       </main>
     </div>
   )

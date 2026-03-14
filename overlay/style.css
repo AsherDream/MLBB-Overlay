@@ -36,7 +36,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-size: 100% 100%; /* Forces background to fill the 1920x1080 stage */
+  background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
 }
@@ -46,26 +46,38 @@
   z-index: 1; 
 }
 
+/* FIX: Changed from relative to absolute to match the layer stack precisely */
 #componentsLayer { 
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   z-index: 10; 
 }
 
 #master-frame-layer { 
-  z-index: 20; 
-  pointer-events: none; /* Allows you to click things 'under' the frame if needed */
+  position: absolute;
+  inset: 0;
+  z-index: 99; /* Forces frame to be on top of components */
+  pointer-events: none;
 }
 
 /* 4. Component Styling */
 .component {
   position: absolute;
   transition: all 0.3s ease; 
+  /* Ensure the container doesn't clip the slam animation */
+  overflow: visible; 
 }
 
 .component img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Ensures hero portraits don't look stretched */
+  /* FIX: Added !important to ensure app.js styles don't get overridden by browser defaults */
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
   display: block;
+  object-position: center center;
 }
 
 /* Special styling for Bans (Grayscale) */

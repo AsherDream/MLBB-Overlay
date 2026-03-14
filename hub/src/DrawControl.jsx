@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams } from 'react-router-dom'
+import { useLayout } from './App.jsx'
 import { Save, Upload } from 'lucide-react'
 import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
 import ModularCanvas from './ModularCanvas.jsx'
@@ -7,6 +8,7 @@ import LayerProperties from './LayerProperties.jsx'
 import { defaultSizeForAtom, newInstanceId } from './atoms.js'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
+
 
 function toServerUrl(url) {
   const s = String(url || '')
@@ -97,7 +99,25 @@ function normalizeNewComponent(c, fallbackZ) {
 }
 
 export default function DrawControl() {
+
+  const [matchState, setMatchState] = useState(null);
+
+  useEffect(() => {
+    // Fetch the current drafting data so the canvas knows who is picked
+    async function fetchMatch() {
+      const res = await fetch(`${SERVER_URL}/api/matchdraft`);
+      if (res.ok) {
+        const data = await res.json();
+        setMatchState(data.draftdata);
+      }
+    }
+    fetchMatch();
+    // Optional: Set an interval to refresh every 5 seconds if you want the Hub to update live
+    const int = setInterval(fetchMatch, 5000);
+    return () => clearInterval(int);
+  }, []);
   const params = useParams()
+  const { sidebarCollapsed } = useLayout()
   const layoutId = params?.id || 'testing'
   const wrapRef = useRef(null)
 
@@ -355,19 +375,7 @@ export default function DrawControl() {
     if (!res.ok) throw new Error(await res.text())
   }
 
-  useEffect(() => {
-    const el = wrapRef.current
-    if (!el) return
-
-    const ro = new ResizeObserver(() => {
-      const rect = el.getBoundingClientRect()
-      const s = Math.min(rect.width / 1920, rect.height / 1080)
-      setScale(clamp(s || 0.35, 0.1, 1))
-    })
-
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+  // Scale is computed inside ModularCanvas; this state is for drop coordination only
 
   const selected = useMemo(() => (components || []).find((c) => c.instanceId === selectedId) || null, [components, selectedId])
 
@@ -494,11 +502,16 @@ export default function DrawControl() {
       const host = wrapRef.current
       if (!host) return
       const rect = host.getBoundingClientRect()
-      const cx = e.clientX - rect.left
-      const cy = e.clientY - rect.top
+      const s = scale || 0.35
+      const stageW = 1920 * s
+      const stageH = 1080 * s
+      const stageLeft = rect.left + (rect.width - stageW) / 2
+      const stageTop = rect.top + (rect.height - stageH) / 2
+      const cx = e.clientX - stageLeft
+      const cy = e.clientY - stageTop
 
-      const x = clampInt(cx / (scale || 1), 0, 1920)
-      const y = clampInt(cy / (scale || 1), 0, 1080)
+      const x = clampInt(cx / s, 0, 1920)
+      const y = clampInt(cy / s, 0, 1080)
 
       const instanceId = newInstanceId(base)
       const size = defaultSizeForAtom(base)
@@ -527,7 +540,7 @@ export default function DrawControl() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#0f0c15] p-6">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#0f0c15] p-6">
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-xs font-semibold tracking-[0.22em] text-white/50">DRAW CONTROL</div>
@@ -617,12 +630,12 @@ export default function DrawControl() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100dvh-180px)] w-full gap-3 overflow-hidden">
+      <div className="flex min-h-0 flex-1 w-full items-stretch gap-3 overflow-hidden">
         <ComponentLibrarySidebar onSpawn={spawnAtom} />
 
         <div
           ref={wrapRef}
-          className="flex min-w-0 flex-1 flex-col overflow-hidden"
+          className="relative z-0 flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden"
           style={{ aspectRatio: '16/9', maxHeight: '80vh' }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
@@ -631,12 +644,15 @@ export default function DrawControl() {
           }}
         >
           <ModularCanvas
-            scale={scale}
             components={components}
             selectedId={selectedId}
             onSelect={setSelectedId}
             onUpdate={(next) => updateComponent(next)}
             backgroundUrl={background || ''}
+            frameUrl={frame || ''}
+            onScaleChange={setScale}
+            recalcTrigger={sidebarCollapsed}
+            matchState={matchState}
           />
         </div>
 
