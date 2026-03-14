@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Route, Routes, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import HubCard from './HubCard.jsx'
@@ -96,11 +97,21 @@ function DisplayOverlayPage() {
 }
 
 export default function App() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
   return (
     <div className="min-h-dvh bg-[#0f0c15]">
-      <Sidebar serverAddress={SERVER_ADDRESS} onCopyServer={(v) => copy(`http://${v}`)} />
+      <Sidebar
+        serverAddress={SERVER_ADDRESS}
+        onCopyServer={(v) => copy(`http://${v}`)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+      />
 
-      <main className="ml-[280px] min-h-dvh">
+      <main
+        className="min-h-dvh transition-[margin] duration-200"
+        style={{ marginLeft: sidebarCollapsed ? 60 : 280 }}
+      >
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/control" element={<ControlPanel />} />

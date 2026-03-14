@@ -10,11 +10,11 @@
       ""
     ],
     "picks": [
+      "Badang",
       "Barats",
-      "Saber",
-      "Argus",
-      "Roger",
-      "Aurora"
+      "Beatrix",
+      "Beatrix",
+      "Balmond"
     ],
     "bans": [],
     "logo": "default_logo.png"
@@ -29,11 +29,17 @@
       "",
       ""
     ],
-    "picks": [],
+    "picks": [
+      "alucard",
+      "angela",
+      "argus",
+      "arlot",
+      "atlas"
+    ],
     "bans": [],
     "logo": "default_logo.png"
   },
-  "map": "The Land of Dawn",
+  "map": "dangerous_grass",
   "phase": "draft",
   "activeLayout": "testing"
 }

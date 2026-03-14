@@ -27,6 +27,7 @@ const ASSETS_ROOT = path.resolve(ROOT_DIR, 'public', 'Assets');
 const BACKGROUNDS_DIR = path.resolve(ASSETS_ROOT, 'backgrounds');
 const FRAMES_DIR = path.resolve(ASSETS_ROOT, 'frames');
 const LOGOS_DIR = path.resolve(ASSETS_ROOT, 'logos');
+const MAPS_DIR = path.resolve(ASSETS_ROOT, 'Maps');
 const HERO_PICK_DIR = path.resolve(ASSETS_ROOT, 'HeroPick');
 const VOICE_LINES_DIR = path.resolve(ASSETS_ROOT, 'VoiceLines');
 
@@ -151,6 +152,7 @@ function hardBootstrap() {
   ensureDir(BACKGROUNDS_DIR);
   ensureDir(FRAMES_DIR);
   ensureDir(LOGOS_DIR);
+  ensureDir(MAPS_DIR);
   ensureDir(HERO_PICK_DIR);
   ensureDir(VOICE_LINES_DIR);
 
@@ -470,6 +472,10 @@ app.get('/api/frames', (req, res) => {
 
 app.get('/api/logos', (req, res) => {
   return res.json({ logos: listFiles(LOGOS_DIR) });
+});
+
+app.get('/api/maps', (req, res) => {
+  return res.json({ maps: listFiles(MAPS_DIR) });
 });
 
 // Update or create a single layout, strictly validated by Zod

@@ -1,36 +1,74 @@
-/* The MLBB "Slam" Entry Animation */
+/* 1. The MLBB "Slam" Entry Animation */
 @keyframes slam {
-    0% { 
-      transform: scale(2.5); 
-      opacity: 0; 
-      filter: brightness(3) blur(5px); 
-    }
-    60% { 
-      transform: scale(0.95); 
-      opacity: 1; 
-      filter: brightness(1.5) blur(0px); 
-    }
-    100% { 
-      transform: scale(1); 
-      filter: brightness(1); 
-    }
+  0% { 
+    transform: scale(2.5); 
+    opacity: 0; 
+    filter: brightness(3) blur(5px); 
   }
-  
-  .animate-slam {
-    animation: slam 0.45s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
-    will-change: transform, opacity;
+  60% { 
+    transform: scale(0.95); 
+    opacity: 1; 
+    filter: brightness(1.5) blur(0px); 
   }
-  
-  /* Base Stage Styling */
-  #overlay-stage {
-    position: relative;
-    width: 1920px;
-    height: 1080px;
-    overflow: hidden;
-    background-color: transparent;
+  100% { 
+    transform: scale(1); 
+    filter: brightness(1); 
   }
-  
-  .component {
-    position: absolute;
-    transition: clip-path 0.3s ease; /* Smooth masking transitions */
-  }
+}
+
+.animate-slam {
+  animation: slam 0.45s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* 2. Layering & Visibility Logic */
+#overlayRoot {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  background-color: transparent;
+  overflow: hidden;
+}
+
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: 100% 100%; /* Forces background to fill the 1920x1080 stage */
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* 3. Z-Index Stack (The Order of Appearance) */
+#background-layer { 
+  z-index: 1; 
+}
+
+#componentsLayer { 
+  z-index: 10; 
+}
+
+#master-frame-layer { 
+  z-index: 20; 
+  pointer-events: none; /* Allows you to click things 'under' the frame if needed */
+}
+
+/* 4. Component Styling */
+.component {
+  position: absolute;
+  transition: all 0.3s ease; 
+}
+
+.component img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensures hero portraits don't look stretched */
+  display: block;
+}
+
+/* Special styling for Bans (Grayscale) */
+.smartbox-ban {
+  filter: grayscale(1) brightness(0.7);
+}

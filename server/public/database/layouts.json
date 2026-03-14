@@ -7,8 +7,8 @@
       {
         "instanceId": "T1_NAME_1773376064550_1e1373e88f8e38",
         "atom": "T1_NAME",
-        "x": 54,
-        "y": 133,
+        "x": 66,
+        "y": 93,
         "width": 484,
         "height": 268,
         "visible": true,
@@ -58,23 +58,6 @@
         }
       },
       {
-        "instanceId": "T1_LOGO_1773376111797_89d735dccbeb28",
-        "atom": "T1_LOGO",
-        "x": 867,
-        "y": 848,
-        "width": 120,
-        "height": 120,
-        "visible": true,
-        "locked": false,
-        "zIndex": 3,
-        "bind": {},
-        "crop": {
-          "x": 0,
-          "y": 0,
-          "scale": 1
-        }
-      },
-      {
         "instanceId": "T1_PICK_1773376118808_fca7f3f2581bb8",
         "atom": "T1_PICK",
         "x": 254,
@@ -85,7 +68,7 @@
         "locked": false,
         "zIndex": 4,
         "bind": {
-          "idx": 0
+          "idx": 1
         },
         "crop": {
           "x": 0,
@@ -104,7 +87,7 @@
         "locked": false,
         "zIndex": 5,
         "bind": {
-          "idx": 0
+          "idx": 2
         },
         "crop": {
           "x": 0,
@@ -123,7 +106,138 @@
         "locked": false,
         "zIndex": 6,
         "bind": {
+          "idx": 3
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "MAP_1773455784041_6ff4afe28a9878",
+        "atom": "MAP",
+        "x": 794,
+        "y": 904,
+        "width": 228,
+        "height": 129,
+        "visible": true,
+        "locked": false,
+        "zIndex": 7,
+        "bind": {},
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_PICK_1773457344769_5e5a3d561d6cb",
+        "atom": "T2_PICK",
+        "x": 1104,
+        "y": 650,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 7,
+        "bind": {
           "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_PICK_1773457349983_32a2a357d2b75",
+        "atom": "T2_PICK",
+        "x": 1262,
+        "y": 643,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 8,
+        "bind": {
+          "idx": 1
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_PICK_1773457351720_1c214c9052a1",
+        "atom": "T2_PICK",
+        "x": 1387,
+        "y": 637,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 9,
+        "bind": {
+          "idx": 2
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_PICK_1773457360266_a0915791de8c2",
+        "atom": "T2_PICK",
+        "x": 1519,
+        "y": 636,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 10,
+        "bind": {
+          "idx": 3
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_PICK_1773457365107_43f4277ef89a6",
+        "atom": "T2_PICK",
+        "x": 1666,
+        "y": 639,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 11,
+        "bind": {
+          "idx": 4
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_PICK_1773457461203_d3c85f156f4f8",
+        "atom": "T1_PICK",
+        "x": 679,
+        "y": 609,
+        "width": 120,
+        "height": 120,
+        "visible": true,
+        "locked": false,
+        "zIndex": 12,
+        "bind": {
+          "idx": 4
         },
         "crop": {
           "x": 0,

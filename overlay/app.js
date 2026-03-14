@@ -94,7 +94,8 @@ function heroPortraitUrl(heroId) {
 
 function mapThumbUrl(mapName) {
   if (!mapName || mapName === 'none') return TRANSPARENT_PX;
-  const safe = String(mapName).toLowerCase();
+  let safe = String(mapName).toLowerCase().trim();
+  if (safe.endsWith('.png')) safe = safe.slice(0, -4);
   return `${SERVER_URL}/Assets/Maps/${encodeURIComponent(safe)}.png`;
 }
 
@@ -274,7 +275,12 @@ function setImageIfExists(id, src, visible) {
   const nextSrc = visible ? String(src || '') : '';
   const srcKey = `${id}::src`;
   if (lastValues.get(srcKey) !== nextSrc) {
-    img.src = nextSrc && nextSrc !== TRANSPARENT_PX ? cacheBust(nextSrc) : nextSrc;
+    const finalSrc = nextSrc && nextSrc !== TRANSPARENT_PX ? cacheBust(nextSrc) : nextSrc;
+    img.src = finalSrc;
+    img.onerror = () => {
+      img.src = TRANSPARENT_PX;
+      img.onerror = null;
+    };
     lastValues.set(srcKey, nextSrc);
   }
 }

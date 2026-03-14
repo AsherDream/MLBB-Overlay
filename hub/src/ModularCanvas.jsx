@@ -13,15 +13,19 @@ function sortByZ(components) {
   return [...components].sort((a, b) => Number(a.zIndex ?? 0) - Number(b.zIndex ?? 0))
 }
 
-export default function ModularCanvas({ scale, components, selectedId, onSelect, onUpdate }) {
+export default function ModularCanvas({ scale, components, selectedId, onSelect, onUpdate, backgroundUrl }) {
   const sorted = useMemo(() => sortByZ(components || []), [components])
+
+  const bgStyle = backgroundUrl
+    ? { backgroundImage: `url("${backgroundUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : {}
 
   return (
     <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 overflow-hidden">
       <div className="h-full w-full overflow-hidden">
         <div
           className="relative origin-top-left overflow-hidden rounded-xl"
-          style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})` }}
+          style={{ width: BASE_W, height: BASE_H, transform: `scale(${scale})`, ...bgStyle }}
           onMouseDown={() => onSelect?.(null)}
           onDragOver={(e) => {
             e.preventDefault()

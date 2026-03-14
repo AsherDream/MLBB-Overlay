@@ -241,12 +241,14 @@ export default function DrawControl() {
     }
   }, [])
 
-  function buildPayload(nextComponents) {
+  function buildPayload(nextComponents, overrides = {}) {
     const list = nextComponents || components || []
+    const bgOverride = overrides.background !== undefined ? overrides.background : toRelativeAssetsPath(background)
+    const frameOverride = overrides.frame !== undefined ? overrides.frame : toRelativeAssetsPath(frame)
     return {
       name: layoutName,
-      background: toRelativeAssetsPath(background),
-      frame: toRelativeAssetsPath(frame),
+      background: bgOverride,
+      frame: frameOverride,
       components: list.map((c, idx) => ({
         instanceId: String(c.instanceId),
         atom: String(c.atom),
@@ -322,11 +324,11 @@ export default function DrawControl() {
     }
   }
 
-  async function saveLayout(explicitComponents) {
+  async function saveLayout(explicitComponents, overrides = {}) {
     const id = String(layoutName || '').trim()
     if (!id) throw new Error('Layout Name is required')
 
-    const body = JSON.stringify(buildPayload(explicitComponents || components))
+    const body = JSON.stringify(buildPayload(explicitComponents || components, overrides))
 
     setIsSaving(true)
     const res = await fetch(`${SERVER_URL}/api/layouts/${encodeURIComponent(id)}`, {
@@ -546,7 +548,11 @@ export default function DrawControl() {
 
           <select
             value={toRelativeAssetsPath(background)}
-            onChange={(e) => setBackground(toServerUrl(e.target.value))}
+            onChange={(e) => {
+              const url = toServerUrl(e.target.value)
+              setBackground(url)
+              saveLayout(components, { background: toRelativeAssetsPath(url) || '' }).catch(() => {})
+            }}
             className="rounded-xl border border-white/10 bg-[#1a1a2e] px-3 py-2 text-xs font-bold text-white"
             style={{ backgroundColor: '#1a1a2e' }}
           >
@@ -562,7 +568,11 @@ export default function DrawControl() {
 
           <select
             value={toRelativeAssetsPath(frame)}
-            onChange={(e) => setFrame(toServerUrl(e.target.value))}
+            onChange={(e) => {
+              const url = toServerUrl(e.target.value)
+              setFrame(url)
+              saveLayout(components, { frame: toRelativeAssetsPath(url) || '' }).catch(() => {})
+            }}
             className="rounded-xl border border-white/10 bg-[#1a1a2e] px-3 py-2 text-xs font-bold text-white"
             style={{ backgroundColor: '#1a1a2e' }}
           >
@@ -607,12 +617,13 @@ export default function DrawControl() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100dvh-180px)] w-full gap-3">
+      <div className="flex h-[calc(100dvh-180px)] w-full gap-3 overflow-hidden">
         <ComponentLibrarySidebar onSpawn={spawnAtom} />
 
         <div
           ref={wrapRef}
-          className="min-w-0 flex-1"
+          className="flex min-w-0 flex-1 flex-col overflow-hidden"
+          style={{ aspectRatio: '16/9', maxHeight: '80vh' }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault()
@@ -625,6 +636,7 @@ export default function DrawControl() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onUpdate={(next) => updateComponent(next)}
+            backgroundUrl={background || ''}
           />
         </div>
 

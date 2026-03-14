@@ -249,15 +249,10 @@ export default function ControlPanel() {
     }
   }, [])
 
-  function setMap(nextMap) {
-    const v = coerceMap(nextMap)
-    setState((prev) => ({ ...prev, map: v }))
-  }
-
-  function setMapType(nextMapType) {
-    const v = coerceMapType(nextMapType)
-    setState((prev) => ({ ...prev, mapType: v }))
-    postMatchIntent({ intent: 'SET_MAP_TYPE', mapType: v }).catch(() => {})
+  function setMap(mapId) {
+    const v = coerceMap(mapId)
+    setState((prev) => ({ ...prev, map: v, mapType: v }))
+    postMatchIntent({ intent: 'SET_MAP', map: v }).catch(() => {})
   }
 
   function resetAll() {
@@ -370,7 +365,7 @@ export default function ControlPanel() {
 
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[320px]">
-            <BattlefieldSelector value={state.mapType || 'none'} onChange={setMapType} />
+            <BattlefieldSelector value={state.map || state.mapType || 'none'} onChange={setMap} />
           </div>
 
           <div className="flex flex-wrap gap-2">
