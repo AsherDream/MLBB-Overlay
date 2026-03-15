@@ -28,23 +28,29 @@ export default function HeroSelect({ value, onSelect, placeholder = 'Select hero
 
   const options = useMemo(() => {
     const base = Array.isArray(heroes) ? heroes : []
-    return allowNone ? [{ name: 'none', hasAsset: false }, ...base] : base
+    return allowNone ? [{ id: 'none', name: 'none', hasAsset: false }, ...base] : base
   }, [allowNone, heroes])
+
+  const normalizedValue = value != null && value !== '' ? String(value).toLowerCase() : ''
 
   return (
     <select
-      value={value}
+      value={normalizedValue}
       onChange={(e) => onSelect?.(e.target.value)}
       className="h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
     >
       <option value="" disabled>
         {placeholder}
       </option>
-      {options.map((h) => (
-        <option key={h.name} value={h.name}>
-          {h.name}
-        </option>
-      ))}
+      {options.map((h) => {
+        const id = (h.id || h.name || '').toString().toLowerCase()
+        const label = h.name || h.id || id
+        return (
+          <option key={id} value={id}>
+            {label}
+          </option>
+        )
+      })}
     </select>
   )
 }

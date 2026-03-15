@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { ArrowLeftRight, RefreshCcw, Shuffle } from 'lucide-react'
 import BattlefieldSelector from './BattlefieldSelector.jsx'
+import DraftManager from './DraftManager.jsx'
 import SmartInput from './SmartInput.jsx'
 import HeroSelect from './HeroSelect.jsx'
 import ThemeManager from './ThemeManager.jsx'
@@ -137,8 +138,36 @@ export default function ControlPanel() {
     socket.on('disconnect', () => setConnected(false))
 
     socket.on('STATE_SYNC', (s) => {
-      if (editingRef.current) return
-      setState(s)
+      setState((prev) => ({
+        ...prev,
+        map: s?.map ?? prev.map,
+        mapType: s?.mapType ?? prev.mapType,
+        phase: s?.phase ?? prev.phase,
+        blueTeam: {
+          ...prev.blueTeam,
+          score: s?.blueTeam?.score ?? prev.blueTeam?.score,
+          picks: Array.isArray(s?.blueTeam?.picks) ? s.blueTeam.picks : prev.blueTeam.picks,
+          bans: Array.isArray(s?.blueTeam?.bans) ? s.blueTeam.bans : prev.blueTeam.bans,
+          ...(editingRef.current
+            ? {}
+            : {
+                name: s?.blueTeam?.name ?? prev.blueTeam?.name,
+                players: Array.isArray(s?.blueTeam?.players) ? s.blueTeam.players : prev.blueTeam.players
+              })
+        },
+        redTeam: {
+          ...prev.redTeam,
+          score: s?.redTeam?.score ?? prev.redTeam?.score,
+          picks: Array.isArray(s?.redTeam?.picks) ? s.redTeam.picks : prev.redTeam.picks,
+          bans: Array.isArray(s?.redTeam?.bans) ? s.redTeam.bans : prev.redTeam.bans,
+          ...(editingRef.current
+            ? {}
+            : {
+                name: s?.redTeam?.name ?? prev.redTeam?.name,
+                players: Array.isArray(s?.redTeam?.players) ? s.redTeam.players : prev.redTeam.players
+              })
+        }
+      }))
     })
 
     socket.on('STATE_ERROR', (msg) => {
@@ -211,9 +240,18 @@ export default function ControlPanel() {
   async function emitReset() {
     try {
       await fetch(`${SERVER_URL}/api/theme-reset`, { method: 'POST' })
-      await fetch(`${SERVER_URL}/api/match-reset`, { method: 'POST' })
     } catch {
       // ignore
+    }
+    try {
+      await fetch(`${SERVER_URL}/api/match-reset`, { method: 'POST' })
+    } catch {
+      // fallback: server may expose state-reset instead
+      try {
+        await fetch(`${SERVER_URL}/api/state-reset`, { method: 'POST' })
+      } catch {
+        // ignore
+      }
     }
   }
 
@@ -257,6 +295,7 @@ export default function ControlPanel() {
 
   function resetAll() {
     emitReset()
+    // Do not manually wipe state; wait for server to broadcast STATE_SYNC
   }
 
   function globalSwapTeams() {
@@ -277,22 +316,36 @@ export default function ControlPanel() {
 
   function setPick(side, idx, hero) {
     const v = String(hero || 'none')
-    setState((prev) => {
-      const next = deepClone(prev)
-      next[side].picks[idx] = v
-      return next
-    })
+    setState((prev) => ({
+      ...prev,
+      [side]: {
+        ...prev[side],
+        picks: prev[side].picks.map((p, i) => (i === idx ? v : p))
+      }
+    }))
     postMatchIntent({ intent: 'SET_PICK', side, idx, hero: v }).catch(() => {})
   }
 
   function setBan(side, idx, hero) {
     const v = String(hero || 'none')
-    setState((prev) => {
-      const next = deepClone(prev)
-      next[side].bans[idx] = v
-      return next
-    })
+    setState((prev) => ({
+      ...prev,
+      [side]: {
+        ...prev[side],
+        bans: prev[side].bans.map((p, i) => (i === idx ? v : p))
+      }
+    }))
     postMatchIntent({ intent: 'SET_BAN', side, idx, hero: v }).catch(() => {})
+  }
+
+  function handleDraftPick(side, idx, heroId) {
+    setPick(side, idx, heroId)
+    setPendingHero(null)
+  }
+
+  function handleDraftBan(side, idx, heroId) {
+    setBan(side, idx, heroId)
+    setPendingHero(null)
   }
 
   function setPlayer(side, idx, name) {
@@ -340,16 +393,6 @@ export default function ControlPanel() {
     })
     postMatchIntent({ intent: 'SET_TEAM_SCORE', side, score: v }).catch(() => {})
   }
-
-  const filteredHeroes = useMemo(() => {
-    const q = String(heroSearch || '').trim().toLowerCase()
-    if (!q) return heroes
-    return heroes.filter((h) => {
-      const id = String(h.id || h.name || '').toLowerCase()
-      const name = String(h.name || h.id || '').toLowerCase()
-      return id.includes(q) || name.includes(q)
-    })
-  }, [heroes, heroSearch])
 
   return (
     <div className="min-h-dvh bg-[#0f0c15] p-6">
@@ -474,114 +517,16 @@ export default function ControlPanel() {
         <ThemeManager />
       </div>
 
-      <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="mb-3 text-xs font-semibold tracking-[0.22em] text-white/50">DRAFT MANAGER</div>
-        <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold tracking-[0.18em] text-white/45">SEARCH HEROES</span>
-            <input
-              type="text"
-              value={heroSearch}
-              onChange={(e) => setHeroSearch(e.target.value)}
-              placeholder="Type hero name…"
-              className="h-8 w-[200px] rounded-lg border border-white/10 bg-[#1a1625] px-3 text-xs text-white/90 outline-none"
-            />
-          </div>
-          {pendingHero ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
-              <span className="text-[11px] font-semibold text-emerald-100">Selected:</span>
-              <span className="text-xs font-bold text-emerald-100">
-                {pendingHero.display || pendingHero.id}
-              </span>
-              <span className="text-[11px] font-semibold text-emerald-100/80">→ choose target below</span>
-            </div>
-          ) : (
-            <div className="text-[11px] font-semibold text-white/40">
-              Click a hero, then choose a target slot.
-            </div>
-          )}
-        </div>
-
-        <div className="grid max-h-[260px] grid-cols-5 gap-2 overflow-y-auto rounded-xl border border-white/5 bg-black/40 p-2 text-xs md:grid-cols-8">
-          {filteredHeroes.map((h) => {
-            const id = String(h.id || h.name || '').toLowerCase()
-            const label = h.name || h.id || id
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setPendingHero({ id, display: label })}
-                className="min-h-[34px] rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-semibold text-white/90 hover:bg-white/15"
-              >
-                {label}
-              </button>
-            )
-          })}
-          {!filteredHeroes.length ? (
-            <div className="col-span-full py-6 text-center text-[11px] font-semibold text-white/40">
-              No heroes found. Ensure /Assets/HeroPick is populated on the server.
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-          {['blueTeam', 'redTeam'].map((side) => {
-            const isBlue = side === 'blueTeam'
-            return (
-              <div
-                key={side}
-                className="rounded-xl border border-white/10 bg-black/30 p-3"
-                style={{ boxShadow: `0 0 0 1px ${isBlue ? '#60a5fa22' : '#fb718522'}` }}
-              >
-                <div className="mb-2 text-[11px] font-semibold tracking-[0.18em] text-white/45">
-                  {isBlue ? 'BLUE' : 'RED'} TARGETS
-                </div>
-                <div className="mb-2 text-[11px] font-semibold text-white/50">PICKS</div>
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={!pendingHero}
-                      onClick={() => {
-                        if (!pendingHero) return
-                        setPick(side, idx, pendingHero.id)
-                      }}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold ${
-                        pendingHero
-                          ? 'border border-emerald-400/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
-                          : 'border border-white/10 bg-white/5 text-white/40'
-                      }`}
-                    >
-                      {isBlue ? 'Blue' : 'Red'} Pick {idx + 1}
-                    </button>
-                  ))}
-                </div>
-                <div className="mb-2 text-[11px] font-semibold text-white/50">BANS</div>
-                <div className="flex flex-wrap gap-2">
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={!pendingHero}
-                      onClick={() => {
-                        if (!pendingHero) return
-                        setBan(side, idx, pendingHero.id)
-                      }}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-semibold ${
-                        pendingHero
-                          ? 'border border-rose-400/40 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20'
-                          : 'border border-white/10 bg-white/5 text-white/40'
-                      }`}
-                    >
-                      {isBlue ? 'Blue' : 'Red'} Ban {idx + 1}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+      <div className="mb-5">
+        <DraftManager
+          heroes={heroes}
+          heroSearch={heroSearch}
+          setHeroSearch={setHeroSearch}
+          pendingHero={pendingHero}
+          setPendingHero={setPendingHero}
+          onPick={handleDraftPick}
+          onBan={handleDraftBan}
+        />
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row">
@@ -693,7 +638,11 @@ function TeamBlock({
             {Array.from({ length: 5 }).map((_, idx) => (
               <div key={idx} className="rounded-xl border border-white/10 bg-[#0f0c15] p-2" style={{ borderColor: `${accent}22` }}>
                 <div className="mb-1 text-[11px] font-semibold text-white/50">Pick {idx + 1}</div>
-                <HeroSelect value={team?.picks?.[idx] || 'none'} onSelect={(hero) => onPick(idx, hero)} />
+                <HeroSelect
+                  key={`pick-${idx}-${team?.picks?.[idx]}`}
+                  value={team?.picks?.[idx] || 'none'}
+                  onSelect={(hero) => onPick(idx, hero)}
+                />
               </div>
             ))}
           </div>
@@ -705,7 +654,11 @@ function TeamBlock({
             {Array.from({ length: 5 }).map((_, idx) => (
               <div key={idx} className="rounded-xl border border-white/10 bg-[#0f0c15] p-2" style={{ borderColor: `${accent}22` }}>
                 <div className="mb-1 text-[11px] font-semibold text-white/50">Ban {idx + 1}</div>
-                <HeroSelect value={team?.bans?.[idx] || 'none'} onSelect={(hero) => onBan(idx, hero)} />
+                <HeroSelect 
+                key={`bans-${idx}-${team?.bans?.[idx]}`}
+                value={team?.bans?.[idx] || 'none'} 
+                onSelect={(hero) => onBan(idx, hero)} 
+                />
               </div>
             ))}
           </div>

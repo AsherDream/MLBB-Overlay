@@ -10,13 +10,15 @@
       ""
     ],
     "picks": [
-      "Badang",
-      "Barats",
-      "brody",
-      "Beatrix",
-      "Balmond"
+      "kagura",
+      "Bane",
+      "Gatotkaca",
+      "Harith",
+      "Akai"
     ],
-    "bans": [],
+    "bans": [
+      "Aurora"
+    ],
     "logo": "default_logo.png"
   },
   "redTeam": {
@@ -32,8 +34,8 @@
     "picks": [
       "ixia",
       "irithel",
-      "argus",
-      "arlot",
+      "bruno",
+      "hanzo",
       "atlas"
     ],
     "bans": [],
