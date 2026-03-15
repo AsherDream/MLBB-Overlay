@@ -16,71 +16,85 @@
   }
 }
 
+/* Slam: transform, opacity, filter only — no z-index */
 .animate-slam {
   animation: slam 0.45s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
 }
 
-/* 2. Layering & Visibility Logic */
+/* ─── 2. Stacking context & layer base ───────────────────────────── */
 #overlayRoot {
   position: relative;
   width: 1920px;
   height: 1080px;
-  background-color: transparent;
   overflow: hidden;
 }
 
 .layer {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  contain: layout paint;
+}
+
+#bgLayer {
+  z-index: 1;
+}
+
+#bgLayer img {
   width: 100%;
   height: 100%;
-  background-size: 100% 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#background-layer {
+  z-index: 5;
   background-repeat: no-repeat;
   background-position: center;
+  background-size: 100% 100%;
 }
 
-/* 3. Z-Index Stack (The Order of Appearance) */
-#background-layer { 
-  z-index: 1; 
+#componentsLayer {
+  z-index: 20;
 }
 
-/* FIX: Changed from relative to absolute to match the layer stack precisely */
-#componentsLayer { 
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10; 
-}
-
-#master-frame-layer { 
-  position: absolute;
-  inset: 0;
-  z-index: 99; /* Forces frame to be on top of components */
+#frameLayer {
+  z-index: 50;
   pointer-events: none;
 }
 
-/* 4. Component Styling */
+#frameLayer img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#topLayer {
+  z-index: 80;
+  pointer-events: none;
+}
+
+/* ─── 3. Component rendering (inside #componentsLayer) ───────────── */
 .component {
   position: absolute;
-  transition: all 0.3s ease; 
-  /* Ensure the container doesn't clip the slam animation */
-  overflow: visible; 
+  overflow: visible;
+  transform-origin: center;
+  will-change: transform, opacity;
 }
 
 .component img {
-  /* FIX: Added !important to ensure app.js styles don't get overridden by browser defaults */
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
-  object-position: center center;
 }
 
 /* Special styling for Bans (Grayscale) */
 .smartbox-ban {
   filter: grayscale(1) brightness(0.7);
+}
+
+/* ─── 4. Development debug: inspect layer order ──────────────────── */
+.debug .layer {
+  outline: 2px dashed red;
 }

@@ -5,21 +5,20 @@
 // - 1920x1080 scale-to-fit with Socket.IO sync
 
 // ─────────────────────────────────────────────────────────────
-// DOM references
+// DOM references (5-layer pipeline)
 // ─────────────────────────────────────────────────────────────
 
 const overlayRoot = document.getElementById('overlayRoot');
 const overlayFit = document.getElementById('overlayFit');
+
+const bgLayer = document.getElementById('bgLayer');
+const backgroundLayer = document.getElementById('background-layer');
 const componentsLayer = document.getElementById('componentsLayer');
+const frameLayer = document.getElementById('frameLayer');
+const topLayer = document.getElementById('topLayer');
 
 const bgImageEl = document.getElementById('bgImage');
 const frameImageEl = document.getElementById('frameImage');
-
-const themeBackgroundLayer = document.getElementById('background-layer');
-const themeFrameLayer = document.getElementById('frame-layer');
-const themeLowerBgLayer = document.getElementById('lower-bg');
-const themeLowerMidBgLayer = document.getElementById('lower-mid-bg');
-const themeMasterFrameLayer = document.getElementById('master-frame-layer');
 
 // ─────────────────────────────────────────────────────────────
 // Globals / master state references
@@ -83,20 +82,35 @@ function shouldFollowLiveLayout() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Asset helpers & hero pre‑fetching (Task 1)
+// Unified asset resolver (replaces heroPortraitUrl, mapThumbUrl, etc.)
 // ─────────────────────────────────────────────────────────────
 
-function heroPortraitUrl(heroId) {
-  const name = String(heroId || '').trim().toLowerCase();
-  if (!name || name === 'none') return TRANSPARENT_PX;
-  return `${SERVER_URL}/Assets/HeroPick/${encodeURIComponent(name)}.png`;
-}
+function resolveAssetUrl(kind, value) {
+  if (!value || value === 'none') return TRANSPARENT_PX;
 
-function mapThumbUrl(mapName) {
-  if (!mapName || mapName === 'none') return TRANSPARENT_PX;
-  let safe = String(mapName).toLowerCase().trim();
-  if (safe.endsWith('.png')) safe = safe.slice(0, -4);
-  return `${SERVER_URL}/Assets/Maps/${encodeURIComponent(safe)}.png`;
+  const v = String(value).trim();
+  if (!v) return TRANSPARENT_PX;
+
+  if (kind === 'custom') {
+    if (v.startsWith('http://') || v.startsWith('https://')) return v;
+    if (v.startsWith('/')) return SERVER_URL + v;
+    return `${SERVER_URL}/Assets/${v}`;
+  }
+
+  const safe = encodeURIComponent(v.toLowerCase());
+  let path;
+  if (kind === 'hero') {
+    path = `/Assets/HeroPick/${safe}.png`;
+  } else if (kind === 'map') {
+    let s = v.toLowerCase().trim();
+    if (s.endsWith('.png')) s = s.slice(0, -4);
+    path = `/Assets/Maps/${encodeURIComponent(s)}.png`;
+  } else if (kind === 'logo') {
+    path = `/Assets/logos/${encodeURIComponent(v)}`;
+  } else {
+    return TRANSPARENT_PX;
+  }
+  return SERVER_URL + path;
 }
 
 function prefetchHeroPortrait(heroId) {
@@ -105,7 +119,7 @@ function prefetchHeroPortrait(heroId) {
   if (heroPortraitCache.has(key)) return;
 
   const img = new Image();
-  const src = heroPortraitUrl(key);
+  const src = resolveAssetUrl('hero', key);
 
   heroPortraitCache.set(key, { img, ready: false });
 
@@ -156,9 +170,8 @@ function normalizedAssetUrl(maybePath) {
 function applyLayoutStyles(layout) {
   if (!layout || typeof layout !== 'object') return;
 
+  // layout.background → #bgLayer
   const background = normalizedAssetUrl(layout.background || '');
-  const frame = normalizedAssetUrl(layout.frame || '');
-
   if (bgImageEl) {
     if (background) {
       bgImageEl.src = cacheBust(background);
@@ -167,9 +180,17 @@ function applyLayoutStyles(layout) {
     }
   }
 
+  // layout.backgroundLayer → #background-layer
+  if (backgroundLayer && layout.backgroundLayer) {
+    const url = normalizedAssetUrl(layout.backgroundLayer);
+    backgroundLayer.style.backgroundImage = url ? `url("${cacheBust(url)}")` : '';
+  }
+
+  // layout.frame / layout.masterFrame → #frameLayer
+  const frameUrl = normalizedAssetUrl(layout.frame || layout.masterFrame || '');
   if (frameImageEl) {
-    if (frame) {
-      frameImageEl.src = cacheBust(frame);
+    if (frameUrl) {
+      frameImageEl.src = cacheBust(frameUrl);
     } else {
       frameImageEl.removeAttribute('src');
     }
@@ -181,27 +202,6 @@ function applyLayoutStyles(layout) {
     if (!k) return;
     setCssVar(`--layout-${k}`, v);
   });
-
-  if (themeBackgroundLayer && layout.backgroundLayer) {
-    const url = normalizedAssetUrl(layout.backgroundLayer);
-    themeBackgroundLayer.style.backgroundImage = url ? `url("${cacheBust(url)}")` : '';
-  }
-  if (themeFrameLayer && layout.frameLayer) {
-    const url = normalizedAssetUrl(layout.frameLayer);
-    themeFrameLayer.style.backgroundImage = url ? `url("${cacheBust(url)}")` : '';
-  }
-  if (themeLowerBgLayer && layout.lowerBg) {
-    const url = normalizedAssetUrl(layout.lowerBg);
-    themeLowerBgLayer.style.backgroundImage = url ? `url("${cacheBust(url)}")` : '';
-  }
-  if (themeLowerMidBgLayer && layout.lowerMidBg) {
-    const url = normalizedAssetUrl(layout.lowerMidBg);
-    themeLowerMidBgLayer.style.backgroundImage = url ? `url("${cacheBust(url)}")` : '';
-  }
-  if (themeMasterFrameLayer && layout.masterFrame) {
-    const url = normalizedAssetUrl(layout.masterFrame);
-    themeMasterFrameLayer.style.backgroundImage = url ? `url("${cacheBust(url)}")` : '';
-  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -226,7 +226,7 @@ function ensureComponentEl(domId, component) {
     img.alt = '';
     el.appendChild(img);
 
-    (componentsLayer || overlayRoot || document.body).appendChild(el);
+    componentsLayer.appendChild(el);
   }
 
   const w = typeof component?.width === 'number' ? component.width : 0;
@@ -275,108 +275,110 @@ function setImageIfExists(id, src, visible) {
   const nextSrc = visible ? String(src || '') : '';
   const srcKey = `${id}::src`;
   if (lastValues.get(srcKey) !== nextSrc) {
-    const finalSrc = nextSrc && nextSrc !== TRANSPARENT_PX ? cacheBust(nextSrc) : nextSrc;
-    img.src = finalSrc;
-
-    img.style.width = '100%';
-    img.style.height = '100%';
-
     img.onerror = () => {
       img.src = TRANSPARENT_PX;
       img.onerror = null;
     };
+    const finalSrc = nextSrc && nextSrc !== TRANSPARENT_PX ? cacheBust(nextSrc) : nextSrc;
+    img.src = finalSrc;
     lastValues.set(srcKey, nextSrc);
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Master Resolver (Task 2)
+// State-to-DOM mapping table (data-driven; no atom-specific logic in renderer)
 // ─────────────────────────────────────────────────────────────
 
-function resolveComponentValue(component, state) {
-  const atom = String(component.atom || '').trim();
+function bindIdx(component) {
   const bind = component.bind && typeof component.bind === 'object' ? component.bind : {};
-
   const idx =
     typeof bind.idx === 'number'
       ? Math.max(0, Math.min(9, bind.idx))
       : Number.isFinite(Number(bind.idx))
       ? Math.max(0, Math.min(9, Number(bind.idx)))
       : null;
+  return idx;
+}
 
-  if (!state || typeof state !== 'object') {
-    return { kind: 'text', value: '' };
-  }
+const ATOM_MAP = {
+  T1_NAME: (state) => ({
+    kind: 'text',
+    value: state?.blueTeam?.name || '',
+  }),
+  T2_NAME: (state) => ({
+    kind: 'text',
+    value: state?.redTeam?.name || '',
+  }),
+  T1_SCORE: (state) => ({
+    kind: 'text',
+    value: String(state?.blueTeam?.score ?? ''),
+  }),
+  T2_SCORE: (state) => ({
+    kind: 'text',
+    value: String(state?.redTeam?.score ?? ''),
+  }),
+  T1_PLAYER_NAME: (state, idx) => ({
+    kind: 'text',
+    value: state?.blueTeam?.players?.[idx] ?? '',
+  }),
+  T2_PLAYER_NAME: (state, idx) => ({
+    kind: 'text',
+    value: state?.redTeam?.players?.[idx] ?? '',
+  }),
+  T1_PICK: (state, idx) => ({
+    kind: 'image',
+    value: state?.blueTeam?.picks?.[idx] || 'none',
+    asset: 'hero',
+  }),
+  T2_PICK: (state, idx) => ({
+    kind: 'image',
+    value: state?.redTeam?.picks?.[idx] || 'none',
+    asset: 'hero',
+  }),
+  T1_BAN: (state, idx) => ({
+    kind: 'image',
+    value: state?.blueTeam?.bans?.[idx] || 'none',
+    asset: 'hero',
+  }),
+  T2_BAN: (state, idx) => ({
+    kind: 'image',
+    value: state?.redTeam?.bans?.[idx] || 'none',
+    asset: 'hero',
+  }),
+  T1_LOGO: (state) => ({
+    kind: 'image',
+    value: state?.blueTeam?.logo || 'none',
+    asset: 'logo',
+  }),
+  T2_LOGO: (state) => ({
+    kind: 'image',
+    value: state?.redTeam?.logo || 'none',
+    asset: 'logo',
+  }),
+  MAP: (state) => ({
+    kind: 'image',
+    value: state?.map || 'none',
+    asset: 'map',
+  }),
+  CUSTOM_TEXT: (_state, _idx, component) => ({
+    kind: 'text',
+    value: String(component?.text || ''),
+  }),
+  CUSTOM_IMAGE: (_state, _idx, component) => ({
+    kind: 'image',
+    value: component?.src || '',
+    asset: 'custom',
+  }),
+};
 
-  // Team names
-  if (atom === 'T1_NAME') {
-    return { kind: 'text', value: state.blueTeam?.name || '' };
-  }
-  if (atom === 'T2_NAME') {
-    return { kind: 'text', value: state.redTeam?.name || '' };
-  }
+function resolveComponentValue(component, state) {
+  const atom = String(component?.atom || '').trim();
+  const mapper = ATOM_MAP[atom];
+  if (!mapper) return { kind: 'text', value: '' };
 
-  // Scores
-  if (atom === 'T1_SCORE') {
-    return { kind: 'text', value: String(state.blueTeam?.score ?? '') };
-  }
-  if (atom === 'T2_SCORE') {
-    return { kind: 'text', value: String(state.redTeam?.score ?? '') };
-  }
-
-  // Player names
-  if (atom === 'T1_PLAYER_NAME' && idx != null) {
-    return { kind: 'text', value: state.blueTeam?.players?.[idx] || '' };
-  }
-  if (atom === 'T2_PLAYER_NAME' && idx != null) {
-    return { kind: 'text', value: state.redTeam?.players?.[idx] || '' };
-  }
-
-  // Picks
-  if (atom === 'T1_PICK' && idx != null) {
-    const hero = state.blueTeam?.picks?.[idx] || 'none';
-    return { kind: 'image', value: heroPortraitUrl(hero) };
-  }
-  if (atom === 'T2_PICK' && idx != null) {
-    const hero = state.redTeam?.picks?.[idx] || 'none';
-    return { kind: 'image', value: heroPortraitUrl(hero) };
-  }
-
-  // Bans
-  if (atom === 'T1_BAN' && idx != null) {
-    const hero = state.blueTeam?.bans?.[idx] || 'none';
-    return { kind: 'image', value: heroPortraitUrl(hero) };
-  }
-  if (atom === 'T2_BAN' && idx != null) {
-    const hero = state.redTeam?.bans?.[idx] || 'none';
-    return { kind: 'image', value: heroPortraitUrl(hero) };
-  }
-
-  // Logos (optional)
-  if (atom === 'T1_LOGO') {
-    const logo = state.blueTeam?.logo;
-    if (logo) return { kind: 'image', value: normalizedAssetUrl(logo) };
-  }
-  if (atom === 'T2_LOGO') {
-    const logo = state.redTeam?.logo;
-    if (logo) return { kind: 'image', value: normalizedAssetUrl(logo) };
-  }
-
-  // Map
-  if (atom === 'MAP') {
-    const mapId = state.map;
-    return { kind: 'image', value: mapThumbUrl(mapId) };
-  }
-
-  // Custom atoms
-  if (atom === 'CUSTOM_TEXT') {
-    return { kind: 'text', value: String(component.text || '') };
-  }
-  if (atom === 'CUSTOM_IMAGE') {
-    return { kind: 'image', value: normalizedAssetUrl(component.src || '') };
-  }
-
-  return { kind: 'text', value: '' };
+  const idx = bindIdx(component);
+  const result = mapper(state || {}, idx, component);
+  return result;
 }
 
 // Previous picks/bans for slam+audio diffing
@@ -402,7 +404,7 @@ function triggerSlamForAtom(component, state) {
 
   if (idx == null) return;
 
-  let prevHero = 'none';
+  let prevHero = 'none'; 
   let nextHero = 'none';
   let sideKey = null;
   let isPick = false;
@@ -428,6 +430,9 @@ function triggerSlamForAtom(component, state) {
   }
 
   if (!sideKey) return;
+
+  if (prevHero === nextHero) return;
+
 
   const fromEmpty = !prevHero || prevHero === 'none';
   const toHero = nextHero && nextHero !== 'none';
@@ -464,7 +469,7 @@ function triggerSlamForAtom(component, state) {
   }
 }
 
-// renderOverlay: pure mapping from unified state + layout → DOM, plus slam/audio
+// renderOverlay: data-driven loop — no atom-specific logic
 function renderOverlay(state, layout) {
   currentState = state;
   currentLayout = layout || currentLayout;
@@ -477,38 +482,60 @@ function renderOverlay(state, layout) {
   for (const component of comps) {
     const domId = componentDomId(component);
     if (!domId) continue;
+
+    const mapper = ATOM_MAP[component.atom];
+    if (!mapper) continue;
+
     seen.add(domId);
-
     ensureComponentEl(domId, component);
-    const resolved = resolveComponentValue(component, state);
 
-    if (resolved.kind === 'image') {
-      setImageIfExists(domId, resolved.value, true);
-      // After setting the new image, check if this component should slam+sound
+    const idx = bindIdx(component);
+    const result = mapper(state || {}, idx, component);
+
+    if (result.kind === 'image') {
+      const url = resolveAssetUrl(result.asset || 'hero', result.value);
+      setImageIfExists(domId, url, true);
       triggerSlamForAtom(component, state);
     } else {
-      setTextIfExists(domId, resolved.value);
+      setTextIfExists(domId, result.value);
     }
   }
 
-  const container = componentsLayer || overlayRoot || document.body;
-  Array.from(container.querySelectorAll('.component')).forEach((node) => {
+  Array.from(componentsLayer.querySelectorAll('.component')).forEach((node) => {
     if (node.id && !seen.has(node.id)) node.remove();
   });
 
-  // Update memory for next diff
   previousPicks = {
-    blue: Array.isArray(state.blueTeam?.picks) ? [...state.blueTeam.picks] : [],
-    red: Array.isArray(state.redTeam?.picks) ? [...state.redTeam.picks] : [],
+    blue: Array.isArray(state?.blueTeam?.picks) ? [...state.blueTeam.picks] : [],
+    red: Array.isArray(state?.redTeam?.picks) ? [...state.redTeam.picks] : [],
   };
   previousBans = {
-    blue: Array.isArray(state.blueTeam?.bans) ? [...state.blueTeam.bans] : [],
-    red: Array.isArray(state.redTeam?.bans) ? [...state.redTeam.bans] : [],
+    blue: Array.isArray(state?.blueTeam?.bans) ? [...state.blueTeam.bans] : [],
+    red: Array.isArray(state?.redTeam?.bans) ? [...state.redTeam.bans] : [],
   };
 }
 
 // ─────────────────────────────────────────────────────────────
-// Scaling & socket sync (Task 4)
+// Scheduled rendering (max once per frame)
+// ─────────────────────────────────────────────────────────────
+
+let pendingState = null;
+let rendering = false;
+
+function scheduleRender(state) {
+  pendingState = state;
+  currentState = state;
+  if (rendering) return;
+  rendering = true;
+
+  requestAnimationFrame(() => {
+    renderOverlay(pendingState, currentLayout);
+    rendering = false;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Scaling & socket sync
 // ─────────────────────────────────────────────────────────────
 
 function applyOverlayScale() {
@@ -608,10 +635,7 @@ async function bootstrap() {
     console.log('Connected to MLBB State Server');
   });
 
-  socket.on('STATE_SYNC', (state) => {
-    currentState = state;
-    renderOverlay(currentState, currentLayout);
-  });
+  socket.on('STATE_SYNC', scheduleRender);
 
   socket.on('LAYOUT_UPDATE', (layoutIdPayload) => {
     const id = String(layoutIdPayload || '').trim();

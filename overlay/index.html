@@ -44,112 +44,7 @@
             background: transparent;
         }
 
-        #overlayRoot {
-            width: 1920px;
-            height: 1080px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: transparent;
-            transform-origin: top left;
-            overflow: hidden;
-        }
-
-        .overlay-master {
-            width: 1920px;
-            height: 1080px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: top left;
-            overflow: hidden;
-        }
-
-        .layer {
-            position: absolute;
-            inset: 0;
-        }
-
-        #componentsLayer {
-            z-index: 110;
-        }
-
-        #bgLayer {
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        #background-layer {
-            z-index: 2;
-            pointer-events: none;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 100% 100%;
-        }
-
-        #frameLayer {
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        #frame-layer {
-            z-index: 90;
-            pointer-events: none;
-        }
-
-        #master-frame-layer {
-            position: absolute;
-            inset: 0;
-            z-index: 95;
-            pointer-events: none;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 100% 100%;
-        }
-
-        #lower-bg {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 100% 100%;
-        }
-
-        #lower-mid-bg {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 100% 100%;
-        }
-
-        .layer img {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        #bgImage {
-            object-fit: cover;
-        }
-        #frameImage {
-            object-fit: contain;
-        }
-
-        .component {
-            position: absolute;
-            overflow: hidden;
-            box-sizing: border-box;
-            transition: all 0.5s ease-in-out;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* Layer stack and component styles live in style.css */
         .component * {
             margin: 0;
             padding: 0;
@@ -232,31 +127,24 @@
             display: flex;
             align-items: center;
         }
-
-        .component img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-        }
     </style>
 </head>
 <body>
     <div id="overlayFit">
-        <div id="overlayRoot" class="overlay-master">
+        <div id="overlayRoot">
             <div id="bgLayer" class="layer">
-                <img id="bgImage" alt="" style="width:100%; height:100%; object-fit:cover;" />
+                <img id="bgImage" alt="" />
             </div>
-    
+
             <div id="background-layer" class="layer"></div>
-    
+
             <div id="componentsLayer" class="layer"></div>
-    
-            <div id="master-frame-layer" class="layer"></div>
-    
+
             <div id="frameLayer" class="layer">
-                <img id="frameImage" alt="" style="width:100%; height:100%; object-fit:contain; pointer-events:none;" />
+                <img id="frameImage" alt="" />
             </div>
+
+            <div id="topLayer" class="layer"></div>
         </div>
     </div>
     
