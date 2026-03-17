@@ -643,11 +643,13 @@ async function bootstrap() {
     reloadLayout(currentLayoutId, true);
   });
 
-  socket.on('ACTIVE_LAYOUT_CHANGED', ({ id }) => {
+  socket.on('ACTIVE_LAYOUT_CHANGED', (payload) => {
     if (!shouldFollowLiveLayout()) return;
-    const nextId = String(id || '').trim();
+
+    const nextId = typeof payload === 'string' ? payload : payload?.id;
     if (!nextId) return;
-    reloadLayout(nextId, false);
+
+    reloadLayout(String(nextId).trim(), false);
   });
 
   socket.on('disconnect', () => {

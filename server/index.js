@@ -5,6 +5,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const multer = require('multer');
 const { matchStateSchema, layoutSchema } = require('./validators/schema');
 
 // ─────────────────────────────────────────────────────────────
@@ -34,6 +36,24 @@ const VOICE_LINES_DIR = path.resolve(ASSETS_ROOT, 'VoiceLines');
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
+
+function getNetworkIPs() {
+  const nets = os.networkInterfaces();
+  const results = [];
+
+  for (const name of Object.keys(nets || {})) {
+    const entries = nets[name];
+    if (!Array.isArray(entries)) continue;
+    for (const net of entries) {
+      if (!net || typeof net !== 'object') continue;
+      if (net.family === 'IPv4' && !net.internal && net.address) {
+        results.push(net.address);
+      }
+    }
+  }
+
+  return results;
+}
 
 function ensureDir(dir) {
   try {
@@ -90,6 +110,14 @@ function createDefaultTheme() {
       disableBoxShadow: false,
     },
   };
+}
+
+function safeBasename(name) {
+  const raw = String(name || '').trim();
+  const base = path.basename(raw);
+  // allow simple ascii filenames; fall back if empty
+  const cleaned = base.replace(/[^\w.\- ()]/g, '').trim();
+  return cleaned || `upload_${Date.now()}`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -369,6 +397,14 @@ app.get('/', (req, res) => {
   );
 });
 
+// Server info for Hub (local + network IPs + port)
+app.get('/api/server-info', (req, res) => {
+  const local = '127.0.0.1';
+  const network = getNetworkIPs();
+  const port = Number(process.env.PORT || 3000);
+  return res.json({ local, network, port });
+});
+
 // ─────────────────────────────────────────────────────────────
 // REST: match state + intents (Task 2)
 // ─────────────────────────────────────────────────────────────
@@ -437,6 +473,17 @@ app.post('/api/theme', (req, res) => {
   }
 });
 
+app.post('/api/theme-reset', (req, res) => {
+  try {
+    theme = createDefaultTheme();
+    atomicWriteJson(THEME_FILE, theme);
+    io.emit('theme_update', theme);
+    return res.json({ ok: true, theme });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/layouts', (req, res) => {
   return res.json({ layouts });
 });
@@ -478,6 +525,21 @@ app.get('/api/maps', (req, res) => {
   return res.json({ maps: listFiles(MAPS_DIR) });
 });
 
+app.put('/api/active-layout', (req, res) => {
+  try {
+    const id = String(req.body?.id || '').trim();
+    if (!id) return res.status(400).json({ error: 'Missing id' });
+    if (!layouts[id]) return res.status(404).json({ error: 'Layout not found' });
+
+    matchState.activeLayout = id;
+    atomicWriteJson(STATE_FILE, matchState);
+    io.emit('ACTIVE_LAYOUT_CHANGED', { id });
+    return res.json({ ok: true, id });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Update or create a single layout, strictly validated by Zod
 app.put('/api/layouts/:id', (req, res) => {
   const id = String(req.params.id || '').trim();
@@ -491,6 +553,58 @@ app.put('/api/layouts/:id', (req, res) => {
     return res.json({ ok: true, id, layout: layouts[id] });
   } catch (err) {
     return res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/match-reset', (req, res) => {
+  try {
+    matchState = createDefaultMatchState();
+    atomicWriteJson(STATE_FILE, matchState);
+    io.emit('STATE_SYNC', matchState);
+    io.emit('MATCH_STATE_CLEARED', matchState);
+    return res.json({ ok: true, state: matchState });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const category = String(req.body?.category || '').trim().toLowerCase();
+    const map = {
+      background: BACKGROUNDS_DIR,
+      frame: FRAMES_DIR,
+      logo: LOGOS_DIR,
+      map: MAPS_DIR,
+    };
+    const dir = map[category] || ASSETS_ROOT;
+    ensureDir(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const original = safeBasename(file?.originalname);
+    cb(null, original);
+  },
+});
+
+const upload = multer({ storage: uploadStorage });
+
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  try {
+    const category = String(req.body?.category || '').trim().toLowerCase();
+    const filename = req.file?.filename;
+    if (!filename) return res.status(400).json({ error: 'Missing file' });
+
+    const urlMap = {
+      background: `/Assets/backgrounds/${encodeURIComponent(filename)}`,
+      frame: `/Assets/frames/${encodeURIComponent(filename)}`,
+      logo: `/Assets/logos/${encodeURIComponent(filename)}`,
+      map: `/Assets/Maps/${encodeURIComponent(filename)}`,
+    };
+    const url = urlMap[category] || `/Assets/${encodeURIComponent(filename)}`;
+    return res.json({ ok: true, url, filename, category });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -615,20 +729,6 @@ app.get('/api/heroes', (req, res) => {
   }
 });
 
-app.get('/api/backgrounds', (req, res) => {
-  const dir = path.resolve(__dirname, 'public/Assets/backgrounds');
-  if (!fs.existsSync(dir)) return res.json([]);
-  const files = fs.readdirSync(dir).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
-  res.json(files);
-});
-
-app.get('/api/frames', (req, res) => {
-  const dir = path.resolve(__dirname, 'public/Assets/frames');
-  if (!fs.existsSync(dir)) return res.json([]);
-  const files = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
-  res.json(files);
-});
-
 // ─────────────────────────────────────────────────────────────
 // Socket.IO: state + theme sync
 // ─────────────────────────────────────────────────────────────
@@ -639,6 +739,18 @@ io.on('connection', (socket) => {
   // Immediately sync current state/theme
   socket.emit('STATE_SYNC', matchState);
   socket.emit('theme_update', theme);
+
+  socket.on('SET_ACTIVE_LAYOUT', ({ id }) => {
+    const nextId = String(id || '').trim();
+    if (!nextId || !layouts[nextId]) return;
+
+    matchState.activeLayout = nextId;
+    atomicWriteJson(STATE_FILE, matchState);
+
+    io.emit('ACTIVE_LAYOUT_CHANGED', { id: nextId });
+
+    console.log('[layout] active layout →', nextId);
+  });
 
   socket.on('disconnect', () => {
     console.log('[socket] client disconnected', socket.id);

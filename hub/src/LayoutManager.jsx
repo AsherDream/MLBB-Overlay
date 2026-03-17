@@ -28,7 +28,8 @@ export default function LayoutManager() {
     })
 
     socket.on('ACTIVE_LAYOUT_CHANGED', (payload) => {
-      if (payload?.id) setActiveLayout(payload.id)
+      const nextId = typeof payload === 'string' ? payload : payload?.id
+      if (nextId) setActiveLayout(String(nextId))
     })
 
     return () => socket.disconnect()
@@ -52,7 +53,7 @@ export default function LayoutManager() {
   const overlayUrls = useMemo(() => {
     const id = encodeURIComponent(activeLayout || 'default_draft')
     return {
-      localhost: `http://localhost:3000/overlay/?id=${id}`,
+      localhost: `${SERVER_URL}/overlay/?id=${id}&follow=1`,
       lan: `http://${getLanIpGuess()}:3000/overlay/?id=${id}`
     }
   }, [activeLayout])

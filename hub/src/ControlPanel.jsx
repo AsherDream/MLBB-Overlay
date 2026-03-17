@@ -128,6 +128,15 @@ export default function ControlPanel() {
   const [pickVolume, setPickVolume] = useState(1)
   const [banVolume, setBanVolume] = useState(0.6)
 
+  const [serverInfo, setServerInfo] = useState({
+    local: '127.0.0.1',
+    network: [],
+    port: 3000,
+  })
+  const [copyLocalStatus, setCopyLocalStatus] = useState('COPY LOCAL OVERLAY')
+  const [copyObsStatus, setCopyObsStatus] = useState('COPY OBS OVERLAY')
+  const [goLiveStatus, setGoLiveStatus] = useState('GO LIVE')
+
   const serverLabel = useMemo(() => SERVER_URL.replace('http://', ''), [])
 
   useEffect(() => {
@@ -177,6 +186,20 @@ export default function ControlPanel() {
     return () => {
       socket.disconnect()
     }
+  }, [])
+
+  useEffect(() => {
+    fetch(`${SERVER_URL}/api/server-info`)
+      .then((r) => r.json())
+      .then((info) => {
+        if (!info || typeof info !== 'object') return
+        setServerInfo((prev) => ({
+          ...prev,
+          ...info,
+          network: Array.isArray(info.network) ? info.network : [],
+        }))
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -255,10 +278,12 @@ export default function ControlPanel() {
     }
   }
 
-  function emitActiveLayout(id) {
+  function setActiveLayout(id) {
     const s = socketRef.current
     if (!s) return
     s.emit('SET_ACTIVE_LAYOUT', { id })
+    setGoLiveStatus('✓ SENT')
+    window.setTimeout(() => setGoLiveStatus('GO LIVE'), 1200)
   }
 
   function emitVolume(next) {
@@ -394,6 +419,27 @@ export default function ControlPanel() {
     postMatchIntent({ intent: 'SET_TEAM_SCORE', side, score: v }).catch(() => {})
   }
 
+  function getObsTargetIp() {
+    if (serverInfo.network && serverInfo.network.length > 0) return serverInfo.network[0]
+    return serverInfo.local || '127.0.0.1'
+  }
+
+  function buildOverlayUrl(ip) {
+    const layoutId = String(selectedLayoutId || '').trim() || 'default_draft'
+    const port = serverInfo.port || 3000
+    return `http://${ip}:${port}/overlay?id=${encodeURIComponent(layoutId)}&follow=1`
+  }
+
+  async function copyTextWithFeedback(text, setLabel, defaultLabel) {
+    try {
+      await navigator.clipboard.writeText(text)
+      setLabel('✓ COPIED')
+      window.setTimeout(() => setLabel(defaultLabel), 1500)
+    } catch {
+      // ignore
+    }
+  }
+
   return (
     <div className="min-h-dvh bg-[#0f0c15] p-6">
       <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center md:justify-between">
@@ -423,6 +469,59 @@ export default function ControlPanel() {
       </div>
 
       <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold tracking-[0.22em] text-white/50">SERVER STATUS</div>
+          </div>
+          <div className="flex gap-2">
+            <CompactButton
+              variant="outline"
+              onClick={() =>
+                copyTextWithFeedback(
+                  buildOverlayUrl(serverInfo.local || '127.0.0.1'),
+                  setCopyLocalStatus,
+                  'COPY LOCAL OVERLAY'
+                )
+              }
+            >
+              {copyLocalStatus}
+            </CompactButton>
+            <CompactButton
+              variant="outline"
+              onClick={() =>
+                copyTextWithFeedback(
+                  buildOverlayUrl(getObsTargetIp()),
+                  setCopyObsStatus,
+                  'COPY OBS OVERLAY'
+                )
+              }
+            >
+              {copyObsStatus}
+            </CompactButton>
+            <CompactButton variant="primary" onClick={() => window.open(buildOverlayUrl(getObsTargetIp()), '_blank')}>
+              OPEN OVERLAY
+            </CompactButton>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">LOCAL</div>
+            <div className="text-sm font-semibold text-white/90">
+              {(serverInfo.local || '127.0.0.1') + ':' + (serverInfo.port || 3000)}
+            </div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-white/45">OBS NETWORK</div>
+            <div className="text-sm font-semibold text-white/90">
+              {serverInfo.network && serverInfo.network.length
+                ? `${serverInfo.network[0]}:${serverInfo.port || 3000}`
+                : 'N/A'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
         <div className="mb-3 text-xs font-semibold tracking-[0.22em] text-white/50">SCENE MANAGER</div>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <label className="min-w-[280px] rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
@@ -446,11 +545,11 @@ export default function ControlPanel() {
               onClick={() => {
                 const id = String(selectedLayoutId || '').trim()
                 if (!id) return
-                emitActiveLayout(id)
+                setActiveLayout(id)
               }}
               variant="primary"
             >
-              GO LIVE
+              {goLiveStatus}
             </CompactButton>
           </div>
         </div>

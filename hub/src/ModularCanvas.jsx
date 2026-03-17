@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Rnd } from 'react-rnd'
 
+const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
+
 const BASE_W = 1920
 const BASE_H = 1080
 
@@ -72,19 +74,23 @@ export default function ModularCanvas({
     : {}
 
   const getHeroImage = (c) => {
-  if (!matchState) return null;
-  const idx = c.bind?.idx ?? 0;
-  let heroId = 'none';
+    if (!matchState) return null
+    const idx = c.bind?.idx ?? 0
+    let heroId = 'none'
 
-  if (c.atom === 'T1_PICK') heroId = matchState.blueTeam?.picks?.[idx];
-  else if (c.atom === 'T2_PICK') heroId = matchState.redTeam?.picks?.[idx];
-  else if (c.atom === 'T1_BAN') heroId = matchState.blueTeam?.bans?.[idx];
-  else if (c.atom === 'T2_BAN') heroId = matchState.redTeam?.bans?.[idx];
-  else if (c.atom === 'MAP') return `http://localhost:3000/Assets/Maps/${matchState.map}.png`;
+    if (c.atom === 'T1_PICK') heroId = matchState.blueTeam?.picks?.[idx]
+    else if (c.atom === 'T2_PICK') heroId = matchState.redTeam?.picks?.[idx]
+    else if (c.atom === 'T1_BAN') heroId = matchState.blueTeam?.bans?.[idx]
+    else if (c.atom === 'T2_BAN') heroId = matchState.redTeam?.bans?.[idx]
+    else if (c.atom === 'MAP') {
+      const mapId = matchState.map
+      if (!mapId || mapId === 'none') return null
+      return `${SERVER_URL}/Assets/Maps/${encodeURIComponent(String(mapId).toLowerCase())}.png`
+    }
 
-  if (!heroId || heroId === 'none') return null;
-  return `http://localhost:3000/Assets/HeroPick/${heroId.toLowerCase()}.png`;
-};
+    if (!heroId || heroId === 'none') return null
+    return `${SERVER_URL}/Assets/HeroPick/${encodeURIComponent(String(heroId).toLowerCase())}.png`
+  }
     
   return (
     <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 overflow-hidden">

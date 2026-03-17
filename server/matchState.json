@@ -41,7 +41,7 @@
     "bans": [],
     "logo": "default_logo.png"
   },
-  "map": "dangerous_grass",
+  "map": "flying_clouds",
   "phase": "draft",
-  "activeLayout": "testing"
+  "activeLayout": "default_draft"
 }

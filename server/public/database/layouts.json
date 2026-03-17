@@ -249,8 +249,8 @@
   },
   "testing": {
     "name": "testing",
-    "background": "",
-    "frame": "",
+    "background": "/Assets/backgrounds/f330d3b95606cf49ad6d5cdec02c8199.jpg",
+    "frame": "/Assets/frames/Draft_pick_frame.png",
     "components": []
   }
 }
