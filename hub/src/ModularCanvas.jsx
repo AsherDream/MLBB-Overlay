@@ -175,6 +175,8 @@ export default function ModularCanvas({
                         src={getHeroImage(c)} 
                         className="absolute inset-0 w-full h-full object-cover opacity-80" 
                         alt="" 
+                        draggable="false" 
+                        onDragStart={(e) => e.preventDefault()} 
                       />
                     )}
                     {/* The Label (Moved to a small badge so it doesn't block the face) */}
