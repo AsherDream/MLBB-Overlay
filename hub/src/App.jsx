@@ -10,6 +10,7 @@ import HubCard from './HubCard.jsx'
 import ControlPanel from './ControlPanel.jsx'
 import DrawControl from './DrawControl.jsx'
 import LayoutManager from './LayoutManager.jsx'
+import DisplayOverlayPage from './DisplayOverlayPage.jsx'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 const SERVER_ADDRESS = SERVER_URL.replace(/^https?:\/\//, '')
@@ -80,27 +81,6 @@ function DashboardPage() {
   )
 }
 
-function DisplayOverlayPage() {
-  const overlayUrl = `http://${SERVER_ADDRESS}/overlay/?id=default_draft`
-
-  return (
-    <div className="p-6">
-      <div className="text-2xl font-extrabold text-white">Display Overlay</div>
-      <div className="mt-2 text-sm text-white/60">Use this URL in OBS (Browser Source):</div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <code className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85">{overlayUrl}</code>
-        <button
-          type="button"
-          onClick={() => copy(overlayUrl)}
-          className="rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
-        >
-          COPY IP
-        </button>
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
@@ -119,12 +99,12 @@ export default function App() {
       >
         <LayoutContext.Provider value={{ sidebarCollapsed }}>
           <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/control" element={<ControlPanel />} />
-          <Route path="/layouts" element={<LayoutManager />} />
-          <Route path="/draw/:id" element={<DrawControl />} />
-          <Route path="/display" element={<DisplayOverlayPage />} />
-        </Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/control" element={<ControlPanel />} />
+            <Route path="/layouts" element={<LayoutManager />} />
+            <Route path="/draw/:id" element={<DrawControl />} />
+            <Route path="/display" element={<DisplayOverlayPage />} />
+          </Routes>
         </LayoutContext.Provider>
       </main>
     </div>
