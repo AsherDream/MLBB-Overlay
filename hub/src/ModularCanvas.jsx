@@ -16,9 +16,8 @@ function sortByZ(components) {
 }
 
 function computeScale(viewportW, viewportH) {
-  if (!viewportW || !viewportH) return 0.35
-  const s = Math.min(viewportW / BASE_W, viewportH / BASE_H)* 0.85 
-  return Math.max(0.1, Math.min(1, s))
+  if (!viewportW || !viewportH) return 1
+  return Math.min(viewportW / 1920, viewportH / 1080) * 0.92;
 }
 
 export default function ModularCanvas({
@@ -33,10 +32,12 @@ export default function ModularCanvas({
   matchState
 }) {
   const viewportRef = useRef(null)
-  const [scale, setScale] = useState(0.35)
+  const [scale, setScale] = useState(1)
   const sorted = useMemo(() => sortByZ(components || []), [components])
   const onScaleChangeRef = useRef(onScaleChange)
-  onScaleChangeRef.current = onScaleChange
+  useEffect(() => {
+    onScaleChangeRef.current = onScaleChange
+  }, [onScaleChange])
 
   const recalc = useCallback(() => {
     const el = viewportRef.current
@@ -69,10 +70,6 @@ export default function ModularCanvas({
     return () => clearTimeout(t)
   }, [recalcTrigger, recalc])
 
-  const bgStyle = backgroundUrl
-    ? { backgroundImage: `url("${backgroundUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : {}
-
   const getHeroImage = (c) => {
     if (!matchState) return null
     const idx = c.bind?.idx ?? 0
@@ -93,108 +90,108 @@ export default function ModularCanvas({
   }
     
   return (
-    <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 overflow-hidden">
+    <div
+      className="flex-1 w-full h-full relative overflow-hidden bg-black/20 rounded-2xl border border-white/10"
+      ref={viewportRef}
+    >
+      {/* By using absolute positioning and CSS calc(), the inner canvas size 
+        never dictates the outer container size. The feedback loop is broken! 
+      */}
       <div
-        ref={viewportRef}
-        className="flex h-full w-full items-center justify-center overflow-hidden"
+        style={{
+          position: 'absolute',
+          width: BASE_W,
+          height: BASE_H,
+          transformOrigin: 'top left',
+          transform: `scale(${scale})`,
+          // Mathematically center the scaled 1920x1080 box within the flexible container
+          left: `calc(50% - ${(BASE_W * scale) / 2}px)`,
+          top: `calc(50% - ${(BASE_H * scale) / 2}px)`,
+          backgroundColor: '#000'
+        }}
+        onMouseDown={() => onSelect?.(null)}
       >
-        <div
-          className="relative origin-center overflow-hidden rounded-none shrink-0"
-          style={{
-            width: BASE_W,
-            height: BASE_H,
-            transform: `scale(${scale})`,
-            ...bgStyle
-          }}
-          onMouseDown={() => onSelect?.(null)}
-          onDragOver={(e) => {
-            e.preventDefault()
-            try {
-              e.dataTransfer.dropEffect = 'copy'
-            } catch {
-              // ignore
-            }
-          }}
-          onDrop={(e) => {
-            // handled by parent via custom event, but keep preventDefault here
-            e.preventDefault()
-          }}
-        >
-          <div className="absolute inset-0" style={{ zIndex: 0, background: 'rgba(255,255,255,0.02)' }} />
+        {/* Background Layer */}
+        {backgroundUrl && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundImage: `url("${backgroundUrl}")`, backgroundSize: 'cover' }}
+          />
+        )}
 
-          <div className="absolute inset-0" style={{ zIndex: 10 }}>
-            {frameUrl ? (
+        {/* Frame Layer */}
+        {frameUrl && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 50,
+              backgroundImage: `url("${frameUrl}")`,
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat'
+            }}
+          />
+        )}
+
+        {/* Components */}
+        {sorted.map((c, idx) => {
+          const id = c.instanceId
+          const isSelected = id === selectedId
+          const z = 1 + clampInt(c.zIndex ?? idx, 0, 999)
+
+          return (
+            <Rnd
+              key={id}
+              bounds="parent"
+              size={{ width: c.width, height: c.height }}
+              position={{ x: c.x, y: c.y }}
+              scale={scale}
+              dragGrid={[1, 1]}
+              resizeGrid={[1, 1]}
+              disableDragging={!!c.locked}
+              enableResizing={!c.locked}
+              onMouseDown={(e) => {
+                e.stopPropagation()
+                onSelect?.(id)
+              }}
+              onDragStop={(e, d) => {
+                onUpdate?.({
+                  ...c,
+                  x: Math.round(d.x),
+                  y: Math.round(d.y)
+                })
+              }}
+              onResizeStop={(e, dir, ref, delta, pos) => {
+                onUpdate?.({
+                  ...c,
+                  x: Math.round(pos.x),
+                  y: Math.round(pos.y),
+                  width: Math.round(ref.offsetWidth),
+                  height: Math.round(ref.offsetHeight)
+                })
+              }}
+              style={{ zIndex: z, opacity: c.visible === false ? 0 : 1 }}
+            >
               <div
-                className="absolute inset-0 bg-no-repeat bg-center"
-                style={{
-                  zIndex: 9999,
-                  pointerEvents: 'none',
-                  backgroundImage: `url("${frameUrl}")`,
-                  backgroundSize: 'contain'
-                }}
-              />
-            ) : null}
-            {sorted.map((c, idx) => {
-              const id = c.instanceId
-              const isSelected = id === selectedId
-              const z = 1 + clampInt(c.zIndex ?? idx, 0, 999)
-
-              return (
-                <Rnd
-                  key={id}
-                  bounds="parent"
-                  size={{ width: c.width, height: c.height }}
-                  position={{ x: c.x, y: c.y }}
-                  scale={scale}
-                  disableDragging={!!c.locked}
-                  enableResizing={!c.locked}
-                  onMouseDown={(e) => {
-                    e.stopPropagation()
-                    onSelect?.(id)
-                  }}
-                  onDragStop={(e, d) => {
-                    onUpdate?.({
-                      ...c,
-                      x: clampInt(d.x, 0, BASE_W),
-                      y: clampInt(d.y, 0, BASE_H)
-                    })
-                  }}
-                  onResizeStop={(e, dir, ref, delta, pos) => {
-                    onUpdate?.({
-                      ...c,
-                      x: clampInt(pos.x, 0, BASE_W),
-                      y: clampInt(pos.y, 0, BASE_H),
-                      width: clampInt(ref.offsetWidth, 10, BASE_W),
-                      height: clampInt(ref.offsetHeight, 10, BASE_H)
-                    })
-                  }}
-                  style={{ zIndex: z, opacity: c.visible === false ? 0 : 1 }}
-                >
-                  <div
-                    className={`h-full w-full overflow-hidden rounded-lg border ${
-                      isSelected ? 'border-[#a78bfa]' : 'border-white/10'
-                    } bg-[#1a1625]/70`}
-                  >
-                    {/* The Actual Hero Image Preview */}
-                    {getHeroImage(c) && (
-                      <img 
-                        src={getHeroImage(c)} 
-                        className="absolute inset-0 w-full h-full object-cover opacity-80" 
-                        alt="" 
-                        draggable="false" 
-                        onDragStart={(e) => e.preventDefault()} 
-                      />
-                    )}
-                    {/* The Label (Moved to a small badge so it doesn't block the face) */}
-                    <div className="absolute top-1 left-1 bg-black/60 px-1 rounded text-[9px] font-bold text-white/50">
-                      {c.alias || c.atom} {c.bind?.idx !== undefined ? `#${c.bind.idx + 1}` : ''}
-                    </div>
-                  </div>
-                </Rnd>
-              )
-            })}
-          </div>
-        </div>
+                className={`h-full w-full overflow-hidden rounded-lg border ${
+                  isSelected ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.5)]' : 'border-white/10'
+                } bg-[#1a1625]/70`}
+              >
+                {getHeroImage(c) && (
+                  <img
+                    src={getHeroImage(c)}
+                    className="absolute inset-0 w-full h-full object-cover opacity-80"
+                    alt=""
+                    draggable="false"
+                    onDragStart={(e) => e.preventDefault()}
+                  />
+                )}
+                <div className="absolute top-1 left-1 bg-black/60 px-1 rounded text-[9px] font-bold text-white/50">
+                  {c.alias || c.atom} {c.bind?.idx !== undefined ? `#${c.bind.idx + 1}` : ''}
+                </div>
+              </div>
+            </Rnd>
+          )
+        })}
       </div>
     </div>
   )

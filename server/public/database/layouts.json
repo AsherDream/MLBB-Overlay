@@ -7,10 +7,10 @@
       {
         "instanceId": "T1_NAME_1773376064550_1e1373e88f8e38",
         "atom": "T1_NAME",
-        "x": 431,
-        "y": 13,
-        "width": 484,
-        "height": 268,
+        "x": 278,
+        "y": 0,
+        "width": 181,
+        "height": 72,
         "visible": true,
         "locked": false,
         "zIndex": 0,
@@ -238,6 +238,118 @@
         "zIndex": 12,
         "bind": {
           "idx": 4
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_NAME_1773935968309_84416e479a0f3",
+        "atom": "T2_NAME",
+        "x": 1203,
+        "y": 0,
+        "width": 165,
+        "height": 51,
+        "visible": true,
+        "locked": false,
+        "zIndex": 14,
+        "bind": {},
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_BAN_1773936244860_57e084a4c9e91",
+        "atom": "T2_BAN",
+        "x": 969,
+        "y": 24,
+        "width": 155,
+        "height": 372,
+        "visible": true,
+        "locked": false,
+        "zIndex": 14,
+        "bind": {
+          "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_BAN_1773936305482_990d8e812c1f3",
+        "atom": "T2_BAN",
+        "x": 2723,
+        "y": 399,
+        "width": 187,
+        "height": 375,
+        "visible": true,
+        "locked": false,
+        "zIndex": 15,
+        "bind": {
+          "idx": 1
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T2_BAN_1773938029626_af3149ee76f47",
+        "atom": "T2_BAN",
+        "x": 1623,
+        "y": 531,
+        "width": 133,
+        "height": 75,
+        "visible": true,
+        "locked": false,
+        "zIndex": 16,
+        "bind": {
+          "idx": 2
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_BAN_1773938040323_b443ed2f7ea7a",
+        "atom": "T1_BAN",
+        "x": 0,
+        "y": 512,
+        "width": 158,
+        "height": 88,
+        "visible": true,
+        "locked": false,
+        "zIndex": 17,
+        "bind": {
+          "idx": 0
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_BAN_1773941937164_4d29c22fde3498",
+        "atom": "T1_BAN",
+        "x": 164,
+        "y": 543,
+        "width": 144,
+        "height": 73,
+        "visible": true,
+        "locked": false,
+        "zIndex": 18,
+        "bind": {
+          "idx": 1
         },
         "crop": {
           "x": 0,

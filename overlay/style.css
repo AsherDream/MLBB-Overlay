@@ -1,3 +1,8 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 /* 1. The MLBB "Slam" Entry Animation */
 @keyframes slam {
   0% { 
@@ -76,10 +81,9 @@
 
 /* ─── 3. Component rendering (inside #componentsLayer) ───────────── */
 .component {
-  position: absolute;
-  overflow: visible;
-  transform-origin: center;
-  will-change: transform, opacity;
+  position: absolute !important;
+  display: block;
+  pointer-events: none;
 }
 
 .component img {
@@ -91,7 +95,9 @@
 
 /* Special styling for Bans (Grayscale) */
 .smartbox-ban {
-  filter: grayscale(1) brightness(0.7);
+  overflow: hidden;
+  filter: grayscale(1) brightness(0.6);
+  border: 2px solid #ff4d4d;
 }
 
 /* ─── 4. Development debug: inspect layer order ──────────────────── */

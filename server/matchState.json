@@ -17,7 +17,9 @@
       "Akai"
     ],
     "bans": [
-      "Aurora"
+      "alpha",
+      "akai",
+      "aldous"
     ],
     "logo": "default_logo.png"
   },
@@ -38,7 +40,11 @@
       "hanzo",
       "atlas"
     ],
-    "bans": [],
+    "bans": [
+      "aamon",
+      "akai",
+      "aurora"
+    ],
     "logo": "default_logo.png"
   },
   "map": "flying_clouds",

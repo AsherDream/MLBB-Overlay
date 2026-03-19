@@ -232,10 +232,10 @@ function ensureComponentEl(domId, component) {
   const w = typeof component?.width === 'number' ? component.width : 0;
   const h = typeof component?.height === 'number' ? component.height : 0;
 
-  el.style.left = `${component.x}px`;
-  el.style.top = `${component.y}px`;
-  el.style.width = `${w}px`;
-  el.style.height = `${h}px`;
+  el.style.left = `${Math.round(component.x)}px`;
+  el.style.top = `${Math.round(component.y)}px`;
+  el.style.width = `${Math.round(w)}px`;
+  el.style.height = `${Math.round(h)}px`;
   el.style.display = component.visible === false ? 'none' : 'block';
 
   const isBan = String(component.atom || '').includes('BAN');
@@ -539,21 +539,15 @@ function scheduleRender(state) {
 // ─────────────────────────────────────────────────────────────
 
 function applyOverlayScale() {
-  try {
-    if (!overlayRoot) return;
-    const vw = window.innerWidth || 1920;
-    const vh = window.innerHeight || 1080;
-    const widthRatio = vw / 1920;
-    const heightRatio = vh / 1080;
-    const scale = Math.min(widthRatio, heightRatio);
+  const vw = window.innerWidth || 1920
+  const vh = window.innerHeight || 1080
 
-    overlayRoot.style.transformOrigin = 'top left';
-    overlayRoot.style.transform = `scale(${Number.isFinite(scale) ? scale : 1})`;
-    overlayRoot.style.left = `${(vw - 1920 * scale) / 2}px`;
-    overlayRoot.style.top = `${(vh - 1080 * scale) / 2}px`;
-  } catch {
-    // ignore
-  }
+  const scale = Math.min(vw / 1920, vh / 1080)
+
+  overlayRoot.style.transformOrigin = 'top left'
+  overlayRoot.style.transform = `scale(${scale})`
+  overlayRoot.style.left = `${(vw - 1920 * scale) / 2}px`
+  overlayRoot.style.top = `${(vh - 1080 * scale) / 2}px`
 }
 
 // ─────────────────────────────────────────────────────────────
