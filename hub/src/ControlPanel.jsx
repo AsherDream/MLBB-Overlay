@@ -143,6 +143,17 @@ export default function ControlPanel() {
     const socket = io(SERVER_URL)
     socketRef.current = socket
 
+    // Fetch initial audio config (Task 2)
+    fetch(`${SERVER_URL}/api/audio`)
+      .then((r) => r.json())
+      .then((cfg) => {
+        setAudioEnabled(cfg.enabled)
+        setMasterVolume(cfg.master)
+        setPickVolume(cfg.pick)
+        setBanVolume(cfg.ban)
+      })
+      .catch(() => {})
+
     socket.on('connect', () => setConnected(true))
     socket.on('disconnect', () => setConnected(false))
 
@@ -184,7 +195,7 @@ export default function ControlPanel() {
     })
 
     return () => {
-      socket.disconnect()
+      socketRef.current?.disconnect()
     }
   }, [])
 
@@ -291,10 +302,6 @@ export default function ControlPanel() {
     if (!s) return
     s.emit('VOLUME_CHANGE', next)
   }
-
-  useEffect(() => {
-    emitVolume({ enabled: audioEnabled, master: masterVolume, pick: pickVolume, ban: banVolume })
-  }, [audioEnabled, masterVolume, pickVolume, banVolume])
 
   const emitDebounceRef = useRef(null)
 
@@ -563,7 +570,11 @@ export default function ControlPanel() {
             <input
               type="checkbox"
               checked={audioEnabled}
-              onChange={(e) => setAudioEnabled(e.target.checked)}
+              onChange={(e) => {
+                const v = e.target.checked
+                setAudioEnabled(v)
+                emitVolume({ enabled: v })
+              }}
               className="h-4 w-4"
             />
           </label>
@@ -576,7 +587,11 @@ export default function ControlPanel() {
               max="1"
               step="0.01"
               value={masterVolume}
-              onChange={(e) => setMasterVolume(Number(e.target.value))}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setMasterVolume(v)
+                emitVolume({ master: v })
+              }}
               className="w-full"
             />
             <div className="mt-1 text-[11px] font-semibold text-white/60">{Math.round(masterVolume * 100)}%</div>
@@ -590,7 +605,11 @@ export default function ControlPanel() {
               max="1"
               step="0.01"
               value={pickVolume}
-              onChange={(e) => setPickVolume(Number(e.target.value))}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setPickVolume(v)
+                emitVolume({ pick: v })
+              }}
               className="w-full"
             />
             <div className="mt-1 text-[11px] font-semibold text-white/60">{Math.round(pickVolume * 100)}%</div>
@@ -604,7 +623,11 @@ export default function ControlPanel() {
               max="1"
               step="0.01"
               value={banVolume}
-              onChange={(e) => setBanVolume(Number(e.target.value))}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setBanVolume(v)
+                emitVolume({ ban: v })
+              }}
               className="w-full"
             />
             <div className="mt-1 text-[11px] font-semibold text-white/60">{Math.round(banVolume * 100)}%</div>

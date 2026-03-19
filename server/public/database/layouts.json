@@ -265,8 +265,8 @@
       {
         "instanceId": "T2_BAN_1773936244860_57e084a4c9e91",
         "atom": "T2_BAN",
-        "x": 969,
-        "y": 24,
+        "x": 817,
+        "y": 110,
         "width": 155,
         "height": 372,
         "visible": true,
@@ -350,6 +350,25 @@
         "zIndex": 18,
         "bind": {
           "idx": 1
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        }
+      },
+      {
+        "instanceId": "T1_PLAYER_NAME_1773946944235_a9fe085ecb8808",
+        "atom": "T1_PLAYER_NAME",
+        "x": 271,
+        "y": 104,
+        "width": 260,
+        "height": 40,
+        "visible": true,
+        "locked": false,
+        "zIndex": 19,
+        "bind": {
+          "idx": 0
         },
         "crop": {
           "x": 0,

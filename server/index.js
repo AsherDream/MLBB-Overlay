@@ -151,6 +151,7 @@ function createDefaultMatchState() {
 let matchState = createDefaultMatchState();      // in‑memory master state
 let layouts = {};                                // id → layout object
 let theme = createDefaultTheme();                // in‑memory theme
+let audioConfig = { enabled: true, master: 1, pick: 1, ban: 0.6 };
 
 function createDefaultLayouts() {
   // Base layouts validated against layoutSchema, using schema defaults
@@ -403,6 +404,11 @@ app.get('/api/server-info', (req, res) => {
   const network = getNetworkIPs();
   const port = Number(process.env.PORT || 3000);
   return res.json({ local, network, port });
+});
+
+// Audio configuration (Task 1)
+app.get('/api/audio', (req, res) => {
+  res.json(audioConfig);
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -739,6 +745,7 @@ io.on('connection', (socket) => {
   // Immediately sync current state/theme
   socket.emit('STATE_SYNC', matchState);
   socket.emit('theme_update', theme);
+  socket.emit('AUDIO_SYNC', audioConfig);
 
   socket.on('SET_ACTIVE_LAYOUT', ({ id }) => {
     const nextId = String(id || '').trim();
@@ -750,6 +757,13 @@ io.on('connection', (socket) => {
     io.emit('ACTIVE_LAYOUT_CHANGED', { id: nextId });
 
     console.log('[layout] active layout →', nextId);
+  });
+
+  socket.on('VOLUME_CHANGE', (cfg) => {
+    if (cfg && typeof cfg === 'object') {
+      audioConfig = { ...audioConfig, ...cfg };
+      io.emit('AUDIO_SYNC', audioConfig); // IMPORTANT: not broadcast
+    }
   });
 
   socket.on('disconnect', () => {
