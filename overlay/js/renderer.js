@@ -112,6 +112,7 @@ function ensureComponentEl(domId, component) {
   el.style.top = `${Math.round(component.y)}px`
   el.style.width = `${Math.round(w)}px`
   el.style.height = `${Math.round(h)}px`
+  el.style.overflow = 'hidden'
   el.style.display = component.visible === false ? 'none' : 'block'
 
   const isBan = String(component.atom || '').includes('BAN')
@@ -258,6 +259,50 @@ function resolveComponentValue(component, state) {
   return result
 }
 
+// Apply image pan/zoom/rotate transform reactively during renderOverlay.
+// Uses lastValues caching to avoid redundant style writes.
+function applyImageTransform(el, component) {
+  if (!el) return
+  const img = el.querySelector('img')
+  if (!img) return
+
+  console.log('[Overlay] 🎯 Applying transform:', {
+    id: component.instanceId || component.id,
+    transform: component.transform
+  })
+
+  const t = {
+    scale: component.transform?.scale ?? component.crop?.scale ?? 1,
+    panX: component.transform?.panX ?? component.crop?.x ?? 0,
+    panY: component.transform?.panY ?? component.crop?.y ?? 0,
+    rotation: component.transform?.rotation ?? 0
+  }
+
+  const scale = t.scale ?? 1
+  const panX = t.panX ?? 0
+  const panY = t.panY ?? 0
+  const rotation = t.rotation ?? 0
+
+  const next = JSON.stringify({ scale, panX, panY, rotation })
+  const transformKey = `${el.id}::transform`
+
+  if (lastValues.get(transformKey) === next) return
+  lastValues.set(transformKey, next)
+
+  img.style.position = 'absolute'
+  img.style.top = '50%'
+  img.style.left = '50%'
+  img.style.transformOrigin = 'center center'
+
+  // Critical: translate(-50%, -50%) must come FIRST
+  img.style.transform = `
+    translate(-50%, -50%)
+    translate(${panX || 0}px, ${panY || 0}px)
+    scale(${scale || 1})
+    rotate(${rotation || 0}deg)
+  `
+}
+
 export function triggerSlamAndAudio(component, state) {
   if (isFirstRender) {
     console.log('[Diffing] 🛡️ First render — skipping triggers')
@@ -339,7 +384,7 @@ export function renderOverlay(state, layout) {
     if (!mapper) continue
 
     seen.add(domId)
-    ensureComponentEl(domId, component)
+    const el = ensureComponentEl(domId, component)
 
     const idx = bindIdx(component)
     const result = mapper(state || {}, idx, component)
@@ -349,6 +394,8 @@ export function renderOverlay(state, layout) {
       setImageIfExists(domId, url, true)
       // 🔥 Critical: diffing + slam + audio
       triggerSlamAndAudio(component, state)
+      // Reactive transform sync (cached for performance)
+      applyImageTransform(el, component)
     } else {
       setTextIfExists(domId, result.value)
     }

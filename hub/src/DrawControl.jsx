@@ -5,6 +5,7 @@ import { Save, Upload } from 'lucide-react'
 import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
 import ModularCanvas from './ModularCanvas.jsx'
 import LayerProperties from './LayerProperties.jsx'
+import CropControlsSidebar from './components/CropControlsSidebar.jsx'
 import { defaultSizeForAtom, newInstanceId } from './atoms.js'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
@@ -51,6 +52,16 @@ function classifyAtom(atom) {
   return { side, kind }
 }
 
+function normalizeTransform(transform) {
+  return {
+    scale: 1,
+    panX: 0,
+    panY: 0,
+    rotation: 0,
+    ...(transform || {})
+  }
+}
+
 function normalizeNewComponent(c, fallbackZ) {
   const size = defaultSizeForAtom(c?.atom)
   const rawBind = c?.bind && typeof c.bind === 'object' ? c.bind : {}
@@ -93,6 +104,15 @@ function normalizeNewComponent(c, fallbackZ) {
     zIndex: typeof c?.zIndex === 'number' ? c.zIndex : fallbackZ,
     src: typeof c?.src === 'string' ? c.src : '',
     bind,
+    transform: normalizeTransform(
+      c?.transform && typeof c.transform === 'object'
+        ? c.transform
+        : {
+            scale: c?.crop?.scale,
+            panX: c?.crop?.x,
+            panY: c?.crop?.y,
+          }
+    ),
     crop,
     maskPoints
   }
@@ -124,6 +144,7 @@ export default function DrawControl() {
   const [scale, setScale] = useState(0.35)
   const [layoutName, setLayoutName] = useState(layoutId)
   const [selectedId, setSelectedId] = useState(null)
+  const [editingCropId, setEditingCropId] = useState(null)
   const [components, setComponents] = useState([])
 
   const [background, setBackground] = useState('')
@@ -133,6 +154,7 @@ export default function DrawControl() {
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const toastTimeoutRef = useRef(null)
+  const saveTimeoutRef = useRef(null)
 
   function showToast(message) {
     if (!message) return
@@ -145,6 +167,25 @@ export default function DrawControl() {
       setToast(null)
       toastTimeoutRef.current = null
     }, 2000)
+  }
+
+  function triggerAutoSave(comps) {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      console.log('[AutoSave] 🚀 Saving layout...', {
+        components: (comps || []).map((c) => ({
+          id: c.instanceId,
+          transform: c.transform
+        }))
+      })
+
+      saveLayout(comps)
+        .then(() => console.log('[AutoSave] ✅ Save complete'))
+        .catch((err) => console.error('[AutoSave] ❌ Error:', err))
+    }, 400)
   }
 
   useEffect(() => {
@@ -282,14 +323,14 @@ export default function DrawControl() {
         zIndex: typeof c.zIndex === 'number' ? c.zIndex : idx,
         src: String(c.src || ''),
         bind: c.bind && typeof c.bind === 'object' ? c.bind : {},
-        crop:
-          c.crop && typeof c.crop === 'object'
-            ? {
-                x: Number.isFinite(c.crop.x) ? Math.round(c.crop.x) : 0,
-                y: Number.isFinite(c.crop.y) ? Math.round(c.crop.y) : 0,
-                scale: Number.isFinite(c.crop.scale) && c.crop.scale > 0 ? c.crop.scale : 1
-              }
-            : { x: 0, y: 0, scale: 1 },
+        transform: normalizeTransform(c.transform),
+        // BACKWARD COMPATIBILITY FOR OVERLAY
+        crop: {
+          x: Number.isFinite(c.transform?.panX) ? Math.round(c.transform.panX) : 0,
+          y: Number.isFinite(c.transform?.panY) ? Math.round(c.transform.panY) : 0,
+          scale:
+            Number.isFinite(c.transform?.scale) && c.transform.scale > 0 ? c.transform.scale : 1
+        },
         maskPoints:
           Array.isArray(c.maskPoints) && c.maskPoints.length
             ? c.maskPoints.map((p) => ({
@@ -349,6 +390,13 @@ export default function DrawControl() {
     if (!id) throw new Error('Layout Name is required')
 
     const body = JSON.stringify(buildPayload(explicitComponents || components, overrides))
+
+    console.log('[SAVE] 📦 Payload being sent:', {
+      components: (explicitComponents || components || []).map((c) => ({
+        id: c.instanceId,
+        transform: c.transform
+      }))
+    })
 
     setIsSaving(true)
     const res = await fetch(`${SERVER_URL}/api/layouts/${encodeURIComponent(id)}`, {
@@ -440,11 +488,42 @@ export default function DrawControl() {
   }
 
   function updateComponent(next) {
+    const safeNext = {
+      ...next,
+      transform: {
+        scale: 1,
+        panX: 0,
+        panY: 0,
+        rotation: 0,
+        ...(next?.transform || {})
+      }
+    }
+
+    console.log('[Editor] ✏️ updateComponent called', {
+      id: safeNext.instanceId,
+      transform: safeNext.transform
+    })
+
     setComponents((prev) => {
-      const updated = prev.map((c) => (c.instanceId === next.instanceId ? next : c))
-      // Real-time persistence on drag/resize/property change
-      // Fire-and-forget; errors are logged in the network layer/devtools.
-      saveLayout(updated).catch(() => {})
+      const updated = prev.map((c) =>
+        c.instanceId === safeNext.instanceId
+          ? {
+              ...safeNext,
+              transform: {
+                scale: 1,
+                panX: 0,
+                panY: 0,
+                rotation: 0,
+                ...(c.transform || {}),
+                ...(safeNext.transform || {})
+              }
+            }
+          : c
+      )
+
+      // 🚨 IMPORTANT: async outside React render cycle
+      setTimeout(() => triggerAutoSave(updated), 0)
+
       return updated
     })
   }
@@ -452,10 +531,16 @@ export default function DrawControl() {
   function deleteComponent(target) {
     setComponents((prev) => {
       const updated = prev.filter((c) => c.instanceId !== target.instanceId)
-      saveLayout(updated).catch(() => {})
+
+      console.log('[Editor] 🗑️ deleteComponent', target.instanceId)
+
+      setTimeout(() => triggerAutoSave(updated), 0)
+
       return updated
     })
+
     if (selectedId === target.instanceId) setSelectedId(null)
+    if (editingCropId === target.instanceId) setEditingCropId(null)
   }
 
   function spawnAtom(atomDef) {
@@ -646,21 +731,46 @@ export default function DrawControl() {
           <ModularCanvas
             components={components}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={(id) => {
+              setSelectedId(id)
+              if (!id) setEditingCropId(null)
+            }}
             onUpdate={(next) => updateComponent(next)}
             backgroundUrl={background || ''}
             frameUrl={frame || ''}
             onScaleChange={setScale}
             recalcTrigger={sidebarCollapsed}
             matchState={matchState}
+            editingCropId={editingCropId}
+            setEditingCropId={setEditingCropId}
           />
         </div>
 
-        <LayerProperties
-          selected={selected}
-          onChange={(next) => updateComponent(next)}
-          onDelete={(t) => deleteComponent(t)}
-        />
+        {editingCropId === selectedId && selected ? (
+          <CropControlsSidebar
+            transform={selected.transform}
+            onChange={(newTransform) => {
+              updateComponent({
+                ...selected,
+                transform: {
+                  scale: 1,
+                  panX: 0,
+                  panY: 0,
+                  rotation: 0,
+                  ...(selected.transform || {}),
+                  ...(newTransform || {})
+                }
+              })
+            }}
+            onClose={() => setEditingCropId(null)}
+          />
+        ) : (
+          <LayerProperties
+            selected={selected}
+            onChange={(next) => updateComponent(next)}
+            onDelete={(t) => deleteComponent(t)}
+          />
+        )}
       </div>
     </div>
   )

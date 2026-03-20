@@ -35,10 +35,12 @@
     "picks": [
       "aulus"
     ],
-    "bans": [],
+    "bans": [
+      "aurora"
+    ],
     "logo": "default_logo.png"
   },
   "map": "broken_walls",
   "phase": "draft",
-  "activeLayout": "testing"
+  "activeLayout": "default_draft"
 }

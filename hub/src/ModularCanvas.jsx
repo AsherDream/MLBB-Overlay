@@ -1,10 +1,12 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Rnd } from 'react-rnd'
+import SmartImageFrame from './components/SmartImageFrame.jsx'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 
 const BASE_W = 1920
 const BASE_H = 1080
+const IMAGE_ATOMS = ['T1_PICK', 'T2_PICK', 'T1_BAN', 'T2_BAN', 'T1_LOGO', 'T2_LOGO', 'MAP', 'CUSTOM_IMAGE']
 
 function clampInt(n, min, max) {
   const x = Number.isFinite(n) ? n : 0
@@ -13,6 +15,16 @@ function clampInt(n, min, max) {
 
 function sortByZ(components) {
   return [...components].sort((a, b) => Number(a.zIndex ?? 0) - Number(b.zIndex ?? 0))
+}
+
+function normalizeTransform(transform) {
+  return {
+    scale: 1,
+    panX: 0,
+    panY: 0,
+    rotation: 0,
+    ...(transform || {}),
+  }
 }
 
 function computeScale(viewportW, viewportH) {
@@ -29,7 +41,9 @@ export default function ModularCanvas({
   frameUrl,
   onScaleChange,
   recalcTrigger,
-  matchState
+  matchState,
+  editingCropId,
+  setEditingCropId
 }) {
   const viewportRef = useRef(null)
   const [scale, setScale] = useState(1)
@@ -44,8 +58,12 @@ export default function ModularCanvas({
     if (!el) return
     const rect = el.getBoundingClientRect()
     const s = computeScale(rect.width, rect.height)
+    
     setScale((prev) => {
-      if (prev !== s) onScaleChangeRef.current?.(s)
+      if (prev !== s) {
+        // Run the parent update outside of the current render cycle
+        setTimeout(() => onScaleChangeRef.current?.(s), 0)
+      }
       return s
     })
   }, [])
@@ -109,7 +127,10 @@ export default function ModularCanvas({
           top: `calc(50% - ${(BASE_H * scale) / 2}px)`,
           backgroundColor: '#000'
         }}
-        onMouseDown={() => onSelect?.(null)}
+        onMouseDown={() => {
+          onSelect?.(null)
+          setEditingCropId?.(null)
+        }}
       >
         {/* Background Layer */}
         {backgroundUrl && (
@@ -136,7 +157,10 @@ export default function ModularCanvas({
         {sorted.map((c, idx) => {
           const id = c.instanceId
           const isSelected = id === selectedId
+          const isEditing = editingCropId === id
           const z = 1 + clampInt(c.zIndex ?? idx, 0, 999)
+          const normalizedTransform = normalizeTransform(c.transform)
+          const imageSrc = getHeroImage(c)
 
           return (
             <Rnd
@@ -147,8 +171,8 @@ export default function ModularCanvas({
               scale={scale}
               dragGrid={[1, 1]}
               resizeGrid={[1, 1]}
-              disableDragging={!!c.locked}
-              enableResizing={!c.locked}
+              disableDragging={!!c.locked || isEditing}
+              enableResizing={!c.locked && !isEditing}
               onMouseDown={(e) => {
                 e.stopPropagation()
                 onSelect?.(id)
@@ -156,6 +180,7 @@ export default function ModularCanvas({
               onDragStop={(e, d) => {
                 onUpdate?.({
                   ...c,
+                  transform: normalizedTransform,
                   x: Math.round(d.x),
                   y: Math.round(d.y)
                 })
@@ -163,6 +188,7 @@ export default function ModularCanvas({
               onResizeStop={(e, dir, ref, delta, pos) => {
                 onUpdate?.({
                   ...c,
+                  transform: normalizedTransform,
                   x: Math.round(pos.x),
                   y: Math.round(pos.y),
                   width: Math.round(ref.offsetWidth),
@@ -176,15 +202,21 @@ export default function ModularCanvas({
                   isSelected ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.5)]' : 'border-white/10'
                 } bg-[#1a1625]/70`}
               >
-                {getHeroImage(c) && (
-                  <img
-                    src={getHeroImage(c)}
-                    className="absolute inset-0 w-full h-full object-cover opacity-80"
-                    alt=""
-                    draggable="false"
-                    onDragStart={(e) => e.preventDefault()}
-                  />
-                )}
+                <SmartImageFrame
+                  src={imageSrc}
+                  transform={normalizedTransform}
+                  isEditing={isEditing}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    if (IMAGE_ATOMS.includes(c.atom)) {
+                      setEditingCropId?.(id)
+                      onSelect?.(id)
+                    }
+                  }}
+                  onTransformChange={(newTransform) => {
+                    onUpdate?.({ ...c, transform: newTransform })
+                  }}
+                />
                 <div className="absolute top-1 left-1 bg-black/60 px-1 rounded text-[9px] font-bold text-white/50">
                   {c.alias || c.atom} {c.bind?.idx !== undefined ? `#${c.bind.idx + 1}` : ''}
                 </div>
