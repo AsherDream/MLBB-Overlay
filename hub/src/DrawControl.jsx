@@ -175,16 +175,8 @@ export default function DrawControl() {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      console.log('[AutoSave] 🚀 Saving layout...', {
-        components: (comps || []).map((c) => ({
-          id: c.instanceId,
-          transform: c.transform
-        }))
-      })
-
       saveLayout(comps)
-        .then(() => console.log('[AutoSave] ✅ Save complete'))
-        .catch((err) => console.error('[AutoSave] ❌ Error:', err))
+        .catch((err) => console.error('[AutoSave] Error:', err))
     }, 400)
   }
 
@@ -391,13 +383,6 @@ export default function DrawControl() {
 
     const body = JSON.stringify(buildPayload(explicitComponents || components, overrides))
 
-    console.log('[SAVE] 📦 Payload being sent:', {
-      components: (explicitComponents || components || []).map((c) => ({
-        id: c.instanceId,
-        transform: c.transform
-      }))
-    })
-
     setIsSaving(true)
     const res = await fetch(`${SERVER_URL}/api/layouts/${encodeURIComponent(id)}`, {
       method: 'PUT',
@@ -499,11 +484,6 @@ export default function DrawControl() {
       }
     }
 
-    console.log('[Editor] ✏️ updateComponent called', {
-      id: safeNext.instanceId,
-      transform: safeNext.transform
-    })
-
     setComponents((prev) => {
       const updated = prev.map((c) =>
         c.instanceId === safeNext.instanceId
@@ -531,8 +511,6 @@ export default function DrawControl() {
   function deleteComponent(target) {
     setComponents((prev) => {
       const updated = prev.filter((c) => c.instanceId !== target.instanceId)
-
-      console.log('[Editor] 🗑️ deleteComponent', target.instanceId)
 
       setTimeout(() => triggerAutoSave(updated), 0)
 

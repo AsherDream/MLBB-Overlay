@@ -266,11 +266,6 @@ function applyImageTransform(el, component) {
   const img = el.querySelector('img')
   if (!img) return
 
-  console.log('[Overlay] 🎯 Applying transform:', {
-    id: component.instanceId || component.id,
-    transform: component.transform
-  })
-
   const t = {
     scale: component.transform?.scale ?? component.crop?.scale ?? 1,
     panX: component.transform?.panX ?? component.crop?.x ?? 0,
@@ -305,7 +300,6 @@ function applyImageTransform(el, component) {
 
 export function triggerSlamAndAudio(component, state) {
   if (isFirstRender) {
-    console.log('[Diffing] 🛡️ First render — skipping triggers')
     return
   }
 
@@ -341,20 +335,13 @@ export function triggerSlamAndAudio(component, state) {
 
   if (!sideKey) return
 
-  if (prevHero !== nextHero) {
-    console.log(`[Diffing] 🔄 ${atom}[${idx}] "${prevHero}" → "${nextHero}"`)
-  }
-
   if (prevHero === nextHero) return
 
   const toHero = (nextHero && nextHero !== 'none')
 
   if (!toHero) {
-    console.log(`[Diffing] ❌ Ignored (not EMPTY→HERO)`)
     return
   }
-
-  console.log(`[Diffing] ✅ TRIGGER → ${nextHero}`)
 
   // Visual
   const el = document.getElementById(component.instanceId || component.id)

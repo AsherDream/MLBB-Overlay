@@ -41,10 +41,10 @@
       {
         "instanceId": "T1_PICK_1773376085549_827348b2bed7",
         "atom": "T1_PICK",
-        "x": 532,
-        "y": 136,
-        "width": 209,
-        "height": 387,
+        "x": 8,
+        "y": 708,
+        "width": 175,
+        "height": 343,
         "visible": true,
         "locked": false,
         "zIndex": 2,
@@ -52,8 +52,8 @@
           "idx": 0
         },
         "crop": {
-          "x": 0,
-          "y": 0,
+          "x": -22,
+          "y": 52,
           "scale": 2.33
         }
       },

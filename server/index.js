@@ -390,8 +390,16 @@ const OVERLAY_DIR = path.resolve(ROOT_DIR, '../overlay');
 app.use('/overlay', express.static(OVERLAY_DIR));
 app.use('/Assets', express.static(ASSETS_ROOT));
 
-// Simple home page
+// Simple home page (production: serve React Hub)
 app.get('/', (req, res) => {
+  const hubDistPath = path.join(__dirname, '../hub/dist');
+  const indexPath = path.join(hubDistPath, 'index.html');
+  try {
+    if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  } catch {
+    // ignore
+  }
+
   res.type('html').send(
     '<h1>MLBB Broadcast Suite</h1>' +
       '<p>Overlay: <a href="/overlay/?id=default_draft">/overlay/?id=default_draft</a></p>',
@@ -770,6 +778,28 @@ io.on('connection', (socket) => {
     console.log('[socket] client disconnected', socket.id);
   });
 });
+
+// --- PRODUCTION FRONTEND (HUB) ---
+const hubDistPath = path.join(__dirname, '../hub/dist');
+app.use(express.static(hubDistPath));
+
+// React Router Catch-All (Express 5 Safe)
+app.use((req, res, next) => {
+  // Only intercept GET requests for the React frontend
+  if (req.method !== 'GET') return next()
+
+  // Ignore backend routes
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/overlay') ||
+    req.path.startsWith('/Assets')
+  ) {
+    return next()
+  }
+
+  // Serve the React app
+  res.sendFile(path.join(hubDistPath, 'index.html'))
+})
 
 // ─────────────────────────────────────────────────────────────
 // Start server

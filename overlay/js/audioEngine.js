@@ -74,7 +74,6 @@ export function initAudioUnlocker() {
                 // ignore
               }
               // eslint-disable-next-line no-console
-              console.log('✅ [Audio Engine] Browser audio unlocked')
               unlockScreen.remove()
             })
             .catch(() => {
@@ -90,14 +89,11 @@ export function initAudioUnlocker() {
     // OBS environment (no restriction)
     window.__audioUnlocked = true
     // eslint-disable-next-line no-console
-    console.log('🎥 [Audio Engine] OBS detected → autoplay enabled')
   }
 }
 
 // heroId should be the raw hero name/id from match state (renderer will decide gating)
 export function playHeroAudio(heroId, isPick) {
-  console.log(`[AudioEngine] 📥 Request → ${heroId}`)
-
   if (!window.__audioUnlocked) {
     console.warn(`[AudioEngine] 🛑 Blocked: audio not unlocked`)
     return
@@ -107,8 +103,6 @@ export function playHeroAudio(heroId, isPick) {
     console.warn(`[AudioEngine] 🛑 Blocked: audio disabled`)
     return
   }
-
-  console.log('[AudioEngine] ⚙️ Config:', currentAudioConfig)
 
   const volMultiplier = isPick ? currentAudioConfig.pick : currentAudioConfig.ban
   const finalVolume = Math.max(0, Math.min(1, currentAudioConfig.master * volMultiplier))
@@ -133,9 +127,6 @@ export function playHeroAudio(heroId, isPick) {
     const oggSrc = `${SERVER_URL}/Assets/VoiceLines/${encodeURIComponent(cleanId)}.ogg`
     const mp3Src = `${SERVER_URL}/Assets/VoiceLines/${encodeURIComponent(cleanId)}.mp3`
 
-    console.log(`[AudioEngine] 🔊 Playing ${cleanId}`)
-    console.log(`[AudioEngine] 📁 OGG: ${oggSrc}`)
-
     const audio = new Audio()
     audio.volume = finalVolume
     audio.src = oggSrc
@@ -147,7 +138,6 @@ export function playHeroAudio(heroId, isPick) {
       }
 
       console.warn(`[AudioEngine] ⚠️ OGG failed → fallback to MP3`)
-      console.log(`[AudioEngine] 📁 MP3: ${mp3Src}`)
 
       audio.src = mp3Src
       audio.play().catch((e) => {
