@@ -30,6 +30,8 @@ let previousBans = {
   red: [],
 }
 
+let isFirstRender = true
+
 // ─────────────────────────────────────────────────────────────
 // Layout‑driven styling
 // ─────────────────────────────────────────────────────────────
@@ -256,34 +258,16 @@ function resolveComponentValue(component, state) {
   return result
 }
 
-// ─────────────────────────────────────────────────────────────
-// Visual slam extraction
-// ─────────────────────────────────────────────────────────────
+export function triggerSlamAndAudio(component, state) {
+  if (isFirstRender) {
+    console.log('[Diffing] 🛡️ First render — skipping triggers')
+    return
+  }
 
-export function triggerVisualSlam(domId) {
-  const el = document.getElementById(domId)
-  if (!el) return
-
-  el.classList.remove('animate-slam')
-  el.offsetWidth
-  el.classList.add('animate-slam')
-
-  setTimeout(() => {
-    el.classList.remove('animate-slam')
-  }, 500)
-}
-
-function triggerSlamForAtom(component, state) {
   const atom = String(component.atom || '').trim()
-  const bind = component.bind && typeof component.bind === 'object' ? component.bind : {}
-  const idx =
-    typeof bind.idx === 'number'
-      ? Math.max(0, Math.min(9, bind.idx))
-      : Number.isFinite(Number(bind.idx))
-        ? Math.max(0, Math.min(9, Number(bind.idx)))
-        : null
-
-  if (idx == null) return
+  const bind = component.bind || {}
+  const idx = typeof bind.idx === 'number' ? bind.idx : Number(bind.idx)
+  if (!Number.isFinite(idx)) return
 
   let prevHero = 'none'
   let nextHero = 'none'
@@ -294,33 +278,49 @@ function triggerSlamForAtom(component, state) {
     sideKey = 'blue'
     isPick = true
     prevHero = previousPicks.blue[idx] || 'none'
-    nextHero = state.blueTeam?.picks?.[idx] || 'none'
+    nextHero = state?.blueTeam?.picks?.[idx] || 'none'
   } else if (atom === 'T2_PICK') {
     sideKey = 'red'
     isPick = true
     prevHero = previousPicks.red[idx] || 'none'
-    nextHero = state.redTeam?.picks?.[idx] || 'none'
+    nextHero = state?.redTeam?.picks?.[idx] || 'none'
   } else if (atom === 'T1_BAN') {
     sideKey = 'blue'
     prevHero = previousBans.blue[idx] || 'none'
-    nextHero = state.blueTeam?.bans?.[idx] || 'none'
+    nextHero = state?.blueTeam?.bans?.[idx] || 'none'
   } else if (atom === 'T2_BAN') {
     sideKey = 'red'
     prevHero = previousBans.red[idx] || 'none'
-    nextHero = state.redTeam?.bans?.[idx] || 'none'
+    nextHero = state?.redTeam?.bans?.[idx] || 'none'
   }
 
   if (!sideKey) return
+
+  if (prevHero !== nextHero) {
+    console.log(`[Diffing] 🔄 ${atom}[${idx}] "${prevHero}" → "${nextHero}"`)
+  }
+
   if (prevHero === nextHero) return
 
-  const fromEmpty = !prevHero || prevHero === 'none'
-  const toHero = nextHero && nextHero !== 'none'
-  if (!(fromEmpty && toHero)) return
+  const toHero = (nextHero && nextHero !== 'none')
 
-  const domId = componentDomId(component)
+  if (!toHero) {
+    console.log(`[Diffing] ❌ Ignored (not EMPTY→HERO)`)
+    return
+  }
 
-  // Visual slam + Audio slam are now separated.
-  triggerVisualSlam(domId)
+  console.log(`[Diffing] ✅ TRIGGER → ${nextHero}`)
+
+  // Visual
+  const el = document.getElementById(component.instanceId || component.id)
+  if (el) {
+    el.classList.remove('animate-slam')
+    void el.offsetWidth
+    el.classList.add('animate-slam')
+    setTimeout(() => el.classList.remove('animate-slam'), 500)
+  }
+
+  // Audio
   playHeroAudio(nextHero, isPick)
 }
 
@@ -347,7 +347,8 @@ export function renderOverlay(state, layout) {
     if (result.kind === 'image') {
       const url = resolveAssetUrl(result.asset || 'hero', result.value)
       setImageIfExists(domId, url, true)
-      triggerSlamForAtom(component, state)
+      // 🔥 Critical: diffing + slam + audio
+      triggerSlamAndAudio(component, state)
     } else {
       setTextIfExists(domId, result.value)
     }
@@ -364,6 +365,11 @@ export function renderOverlay(state, layout) {
   previousBans = {
     blue: Array.isArray(state?.blueTeam?.bans) ? [...state.blueTeam.bans] : [],
     red: Array.isArray(state?.redTeam?.bans) ? [...state.redTeam.bans] : [],
+  }
+
+  // 🛡️ Disable first-render protection AFTER initial sync
+  if (isFirstRender) {
+    isFirstRender = false
   }
 }
 

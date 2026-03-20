@@ -96,49 +96,66 @@ export function initAudioUnlocker() {
 
 // heroId should be the raw hero name/id from match state (renderer will decide gating)
 export function playHeroAudio(heroId, isPick) {
-  // Block audio if browser not unlocked yet
-  if (!window.__audioUnlocked) return
-  if (!currentAudioConfig || !currentAudioConfig.enabled) return
+  console.log(`[AudioEngine] 📥 Request → ${heroId}`)
+
+  if (!window.__audioUnlocked) {
+    console.warn(`[AudioEngine] 🛑 Blocked: audio not unlocked`)
+    return
+  }
+
+  if (!currentAudioConfig || !currentAudioConfig.enabled) {
+    console.warn(`[AudioEngine] 🛑 Blocked: audio disabled`)
+    return
+  }
+
+  console.log('[AudioEngine] ⚙️ Config:', currentAudioConfig)
 
   const volMultiplier = isPick ? currentAudioConfig.pick : currentAudioConfig.ban
   const finalVolume = Math.max(0, Math.min(1, currentAudioConfig.master * volMultiplier))
 
-  if (finalVolume <= 0) return
+  if (finalVolume <= 0) {
+    console.warn(`[AudioEngine] 🛑 Blocked: volume = 0`)
+    return
+  }
 
   try {
-    const heroIdNorm = String(heroId || '').trim().toLowerCase()
-    if (!heroIdNorm || heroIdNorm === 'none') return
+    const cleanId = String(heroId || '').trim().toLowerCase()
+    if (!cleanId || cleanId === 'none') return
 
-    // Anti-spam (300ms throttle)
     const now = Date.now()
-    const last = lastPlayedAudio.get(heroIdNorm) || 0
-    if (now - last < 300) return
-    lastPlayedAudio.set(heroIdNorm, now)
+    const last = lastPlayedAudio.get(cleanId) || 0
+    if (now - last < 300) {
+      console.warn(`[AudioEngine] 🛑 Anti-spam: ${cleanId}`)
+      return
+    }
+    lastPlayedAudio.set(cleanId, now)
+
+    const oggSrc = `${SERVER_URL}/Assets/VoiceLines/${encodeURIComponent(cleanId)}.ogg`
+    const mp3Src = `${SERVER_URL}/Assets/VoiceLines/${encodeURIComponent(cleanId)}.mp3`
+
+    console.log(`[AudioEngine] 🔊 Playing ${cleanId}`)
+    console.log(`[AudioEngine] 📁 OGG: ${oggSrc}`)
 
     const audio = new Audio()
     audio.volume = finalVolume
-
-    const oggSrc = `${SERVER_URL}/Assets/VoiceLines/${encodeURIComponent(heroIdNorm)}.ogg`
-    const mp3Src = `${SERVER_URL}/Assets/VoiceLines/${encodeURIComponent(heroIdNorm)}.mp3`
-
     audio.src = oggSrc
 
-    audio.play().then(() => {
-      console.log(`[Audio] Playing: ${heroIdNorm}`)
-    }).catch((err) => {
-      // If Chrome blocked it, DON'T try the mp3. Just warn the user.
+    audio.play().catch((err) => {
       if (err.name === 'NotAllowedError') {
-        console.warn('🔇 [Audio Blocked]: You must CLICK anywhere on this Overlay page to unlock sound!')
+        console.error('🔇 Chrome autoplay blocked')
         return
       }
 
-      // If it was a 404 or missing file, THEN try the .mp3 fallback
-      console.warn(`[Audio] .ogg missing for ${heroIdNorm}. Trying .mp3 fallback...`)
+      console.warn(`[AudioEngine] ⚠️ OGG failed → fallback to MP3`)
+      console.log(`[AudioEngine] 📁 MP3: ${mp3Src}`)
+
       audio.src = mp3Src
-      audio.play().catch(() => console.error(`[Audio] Both formats missing for: ${heroIdNorm}`))
+      audio.play().catch((e) => {
+        console.error(`[AudioEngine] ❌ MP3 failed`, e)
+      })
     })
-  } catch {
-    // ignore
+  } catch (err) {
+    console.error('[AudioEngine] 💥 Fatal:', err)
   }
 }
 

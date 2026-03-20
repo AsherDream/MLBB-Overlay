@@ -10,16 +10,15 @@
       ""
     ],
     "picks": [
-      "aldous",
+      "bane",
+      "arlot",
+      "atlas",
       "balmond",
-      "dyroth",
-      "franco",
-      "badang"
+      "aurora"
     ],
     "bans": [
-      "alpha",
-      "akai",
-      "aldous"
+      "aurora",
+      "atlas"
     ],
     "logo": "default_logo.png"
   },
@@ -34,20 +33,12 @@
       ""
     ],
     "picks": [
-      "ixia",
-      "estes",
-      "bruno",
-      "hanzo",
-      "atlas"
+      "aulus"
     ],
-    "bans": [
-      "aamon",
-      "akai",
-      "aurora"
-    ],
+    "bans": [],
     "logo": "default_logo.png"
   },
-  "map": "flying_clouds",
+  "map": "broken_walls",
   "phase": "draft",
-  "activeLayout": "default_draft"
+  "activeLayout": "testing"
 }

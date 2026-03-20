@@ -5,7 +5,7 @@
     "fontSizeMultiplier": 1
   },
   "images": {
-    "heroPickBg": "default_bg.jpg",
+    "heroPickBg": "",
     "lowerBg": "",
     "lowerMidBg": "",
     "masterFrame": ""
@@ -21,11 +21,6 @@
     "phaseText": "#ffffff",
     "auraBan": "#ff0000",
     "auraPick": "#ffffff"
-  },
-  "animations": {
-    "banType": "pulse",
-    "pickType": "fade",
-    "heroAnim": "slam"
   },
   "toggles": {
     "disableGlow": false,
