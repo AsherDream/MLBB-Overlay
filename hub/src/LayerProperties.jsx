@@ -38,7 +38,10 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
         ]
 
   return (
-    <aside className="h-full w-[320px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+    <aside
+      className="h-full w-[320px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3"
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <div className="mb-3 text-xs font-semibold tracking-[0.22em] text-white/50">PROPERTIES</div>
 
       <div className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -82,6 +85,19 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
             type="number"
             value={selected.height}
             onDebouncedChange={(v) => onChange?.({ ...selected, height: clampInt(Number(v), 10, 1080) })}
+          />
+        </div>
+
+        {/* New Frame Rotation Control */}
+        <div className="mt-2">
+          <SmartInput
+            label="Frame Rotation (deg)"
+            type="number"
+            value={selected.frameRotation ?? 0}
+            onDebouncedChange={(v) => {
+              const rot = Number(v);
+              onChange?.({ ...selected, frameRotation: Number.isFinite(rot) ? rot : 0 });
+            }}
           />
         </div>
 

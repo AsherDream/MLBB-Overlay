@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Rnd } from 'react-rnd'
 import SmartImageFrame from './components/SmartImageFrame.jsx'
+import RotationHandle from './components/RotationHandle.jsx'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 
@@ -88,6 +89,37 @@ export default function ModularCanvas({
     return () => clearTimeout(t)
   }, [recalcTrigger, recalc])
 
+  // WASD and Arrow Key Nudging Logic
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Do not nudge if the user is typing in a text box or input field
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      if (!selectedId) return;
+      const c = components?.find((comp) => comp.instanceId === selectedId);
+      if (!c || c.locked) return;
+
+      let dx = 0;
+      let dy = 0;
+      const step = e.shiftKey ? 10 : 1; // Hold Shift to move 10 pixels at a time
+
+      if (e.key === 'ArrowUp' || e.key === 'w') dy = -step;
+      else if (e.key === 'ArrowDown' || e.key === 's') dy = step;
+      else if (e.key === 'ArrowLeft' || e.key === 'a') dx = -step;
+      else if (e.key === 'ArrowRight' || e.key === 'd') dx = step;
+
+      // If a movement key was pressed, apply the nudge and prevent page scrolling
+      if (dx !== 0 || dy !== 0) {
+        e.preventDefault();
+        onUpdate?.({ ...c, x: c.x + dx, y: c.y + dy });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [components, selectedId, onUpdate]);
+
   const getHeroImage = (c) => {
     if (!matchState) return null
     const idx = c.bind?.idx ?? 0
@@ -161,6 +193,7 @@ export default function ModularCanvas({
           const z = 1 + clampInt(c.zIndex ?? idx, 0, 999)
           const normalizedTransform = normalizeTransform(c.transform)
           const imageSrc = getHeroImage(c)
+          const safeFrameRot = Number.isFinite(Number(c.frameRotation)) ? c.frameRotation : 0;
 
           return (
             <Rnd
@@ -201,6 +234,11 @@ export default function ModularCanvas({
                 className={`h-full w-full overflow-hidden rounded-lg border ${
                   isSelected ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.5)]' : 'border-white/10'
                 } bg-[#1a1625]/70`}
+                style={{
+                  transform: `rotate(${safeFrameRot}deg)`,
+                  transformOrigin: 'center center',
+                  transition: 'transform 0.1s ease-out'
+                }}
               >
                 <SmartImageFrame
                   src={imageSrc}
@@ -221,6 +259,15 @@ export default function ModularCanvas({
                   {c.alias || c.atom} {c.bind?.idx !== undefined ? `#${c.bind.idx + 1}` : ''}
                 </div>
               </div>
+
+              {/* Outer Frame Handle */}
+              {isSelected && !isEditing && (
+                <RotationHandle
+                  theme="purple"
+                  currentRotation={c.frameRotation}
+                  onRotate={(deg) => onUpdate?.({ ...c, frameRotation: deg })}
+                />
+              )}
             </Rnd>
           )
         })}
