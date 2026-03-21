@@ -115,6 +115,13 @@ function ensureComponentEl(domId, component) {
   el.style.overflow = 'hidden'
   el.style.display = component.visible === false ? 'none' : 'block'
 
+  // Safely append outer frame rotation without infinitely compounding existing transforms
+  const fRot = Number.isFinite(Number(component.frameRotation)) ? Number(component.frameRotation) : 0
+  // Remove any previous rotate() before applying the new one
+  const baseTransform = (el.style.transform || '').replace(/rotate\([^)]+\)/g, '').trim()
+  el.style.transform = `${baseTransform} rotate(${fRot}deg)`.trim()
+  el.style.transformOrigin = 'center center'
+
   const isBan = String(component.atom || '').includes('BAN')
   el.classList.toggle('smartbox-ban', isBan)
 
@@ -266,24 +273,14 @@ function applyImageTransform(el, component) {
   const img = el.querySelector('img')
   if (!img) return
 
-  console.log('[Overlay] 🎯 Applying transform:', {
-    id: component.instanceId || component.id,
-    transform: component.transform
-  })
+  const t = component.transform || component.crop || {}
 
-  const t = {
-    scale: component.transform?.scale ?? component.crop?.scale ?? 1,
-    panX: component.transform?.panX ?? component.crop?.x ?? 0,
-    panY: component.transform?.panY ?? component.crop?.y ?? 0,
-    rotation: component.transform?.rotation ?? 0
-  }
+  const safeScale = Number.isFinite(Number(t.scale)) ? Number(t.scale) : 1
+  const safePanX = Number.isFinite(Number(t.panX ?? t.x)) ? Number(t.panX ?? t.x) : 0
+  const safePanY = Number.isFinite(Number(t.panY ?? t.y)) ? Number(t.panY ?? t.y) : 0
+  const safeRot = Number.isFinite(Number(t.rotation)) ? Number(t.rotation) : 0
 
-  const scale = t.scale ?? 1
-  const panX = t.panX ?? 0
-  const panY = t.panY ?? 0
-  const rotation = t.rotation ?? 0
-
-  const next = JSON.stringify({ scale, panX, panY, rotation })
+  const next = JSON.stringify({ safeScale, safePanX, safePanY, safeRot })
   const transformKey = `${el.id}::transform`
 
   if (lastValues.get(transformKey) === next) return
@@ -294,12 +291,11 @@ function applyImageTransform(el, component) {
   img.style.left = '50%'
   img.style.transformOrigin = 'center center'
 
-  // Critical: translate(-50%, -50%) must come FIRST
   img.style.transform = `
     translate(-50%, -50%)
-    translate(${panX || 0}px, ${panY || 0}px)
-    scale(${scale || 1})
-    rotate(${rotation || 0}deg)
+    translate(${safePanX}px, ${safePanY}px)
+    scale(${safeScale})
+    rotate(${safeRot}deg)
   `
 }
 

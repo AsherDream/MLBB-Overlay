@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import RotationHandle from './RotationHandle.jsx'
 
 const DEFAULT_TRANSFORM = {
   scale: 1,
@@ -96,22 +97,36 @@ export default function SmartImageFrame({
           src={src}
           alt=""
           draggable={false}
-          className="absolute top-1/2 left-1/2 will-change-transform pointer-events-auto"
+          className="pointer-events-auto"
           style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transformOrigin: 'center center',
             transform: `
               translate(-50%, -50%)
-              translate(${safeTransform.panX}px, ${safeTransform.panY}px)
-              scale(${safeTransform.scale})
-              rotate(${safeTransform.rotation}deg)
+              translate(${Number.isFinite(Number(safeTransform.panX)) ? Number(safeTransform.panX) : 0}px,
+                        ${Number.isFinite(Number(safeTransform.panY)) ? Number(safeTransform.panY) : 0}px)
+              scale(${Number.isFinite(Number(safeTransform.scale)) ? Number(safeTransform.scale) : 1})
+              rotate(${Number.isFinite(Number(safeTransform.rotation)) ? Number(safeTransform.rotation) : 0}deg)
             `,
-            transformOrigin: 'center center',
           }}
           onDragStart={(e) => e.preventDefault()}
         />
       ) : null}
 
       {isEditing && (
-        <div className="absolute inset-0 border-2 border-purple-400 pointer-events-none" />
+        <>
+          <div className="absolute inset-0 border-2 border-purple-400 pointer-events-none" />
+          <RotationHandle
+            theme="blue"
+            currentRotation={safeTransform.rotation}
+            onRotate={(deg) => onTransformChange?.({ ...safeTransform, rotation: deg })}
+          />
+        </>
       )}
     </div>
   )

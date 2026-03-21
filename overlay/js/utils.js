@@ -1,15 +1,6 @@
 // Pure utilities (dependency-free)
 
-export const SERVER_URL = (() => {
-  try {
-    if (typeof window !== 'undefined' && window.location && window.location.origin) {
-      return window.location.origin
-    }
-  } catch {
-    // ignore
-  }
-  return 'http://localhost:3000'
-})()
+export const SERVER_URL = window.location.origin
 
 export const TRANSPARENT_PX =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X6nVsAAAAASUVORK5CYII='

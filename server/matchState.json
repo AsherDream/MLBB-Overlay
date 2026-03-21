@@ -10,15 +10,16 @@
       ""
     ],
     "picks": [
-      "bane",
+      "hanabi",
       "arlot",
-      "atlas",
+      "bane",
       "balmond",
       "aurora"
     ],
     "bans": [
       "aurora",
-      "atlas"
+      "balmond",
+      "balmond"
     ],
     "logo": "default_logo.png"
   },
