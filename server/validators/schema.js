@@ -21,7 +21,18 @@ const componentSchema = z.object({
   // Diagonal Masking
   maskPoints: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
   // Panning/Zoom for "Focus Mode"
-  crop: z.object({ x: z.number(), y: z.number(), scale: z.number() }).default({ x: 0, y: 0, scale: 1 })
+  crop: z.object({ x: z.number(), y: z.number(), scale: z.number() }).default({ x: 0, y: 0, scale: 1 }),
+
+  // Explicitly allow transform data so Zod doesn't strip it
+  transform: z.object({
+    scale: z.number().default(1),
+    panX: z.number().default(0),
+    panY: z.number().default(0),
+    rotation: z.number().default(1)
+  }).optional(),
+
+  // New property for rotating the entire component frame
+  frameRotation: z.number().default(0).optional()
 });
 
 // 2. Flexible Match State Schema

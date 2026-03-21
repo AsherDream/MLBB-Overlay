@@ -114,6 +114,7 @@ function normalizeNewComponent(c, fallbackZ) {
           }
     ),
     crop,
+    frameRotation: Number.isFinite(c?.frameRotation) ? c.frameRotation : 0,
     maskPoints
   }
 }
@@ -324,6 +325,7 @@ export default function DrawControl() {
         src: String(c.src || ''),
         bind: c.bind && typeof c.bind === 'object' ? c.bind : {},
         transform: normalizeTransform(c.transform),
+        frameRotation: Number.isFinite(c.frameRotation) ? c.frameRotation : 0,
         // BACKWARD COMPATIBILITY FOR OVERLAY
         crop: {
           x: Number.isFinite(c.transform?.panX) ? Math.round(c.transform.panX) : 0,

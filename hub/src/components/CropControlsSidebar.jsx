@@ -19,7 +19,10 @@ export default function CropControlsSidebar({ transform, onChange, onClose }) {
   }
 
   return (
-    <aside className="h-full w-[320px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+    <aside
+      className="h-full w-[320px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3"
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <div className="rounded-xl border border-white/10 bg-[#1a1625] p-3 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs uppercase tracking-wide text-white/60">Crop Controls</div>
