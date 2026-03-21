@@ -55,10 +55,10 @@
       {
         "instanceId": "T1_PICK_1773376085549_827348b2bed7",
         "atom": "T1_PICK",
-        "x": 578,
-        "y": 119,
-        "width": 212,
-        "height": 425,
+        "x": 301,
+        "y": 120,
+        "width": 274,
+        "height": 401,
         "visible": true,
         "locked": false,
         "zIndex": 2,
@@ -66,17 +66,17 @@
           "idx": 0
         },
         "crop": {
-          "x": 19,
-          "y": -74,
+          "x": -16,
+          "y": 98,
           "scale": 1.95
         },
         "transform": {
           "scale": 1.95,
-          "panX": 19.20001220703125,
-          "panY": -73.59991455078125,
+          "panX": -16,
+          "panY": 98.40005493164062,
           "rotation": 0
         },
-        "frameRotation": 19
+        "frameRotation": 0
       },
       {
         "instanceId": "T1_PICK_1773376118808_fca7f3f2581bb8",

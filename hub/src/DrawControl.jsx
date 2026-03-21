@@ -6,6 +6,7 @@ import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
 import ModularCanvas from './ModularCanvas.jsx'
 import LayerProperties from './LayerProperties.jsx'
 import CropControlsSidebar from './components/CropControlsSidebar.jsx'
+import HistoryShortcuts from './components/HistoryShortcuts.jsx'
 import { defaultSizeForAtom, newInstanceId } from './atoms.js'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
@@ -156,6 +157,37 @@ export default function DrawControl() {
   const [toast, setToast] = useState(null)
   const toastTimeoutRef = useRef(null)
   const saveTimeoutRef = useRef(null)
+
+  // Undo/Redo History Stacks
+  const [past, setPast] = useState([])
+  const [future, setFuture] = useState([])
+
+  const pushHistory = (currentComps) => {
+    setPast((prev) => [...prev, JSON.parse(JSON.stringify(currentComps))].slice(-50))
+    setFuture([])
+  }
+
+  const undo = () => {
+    if (past.length === 0) return
+    const previous = past[past.length - 1]
+    const newPast = past.slice(0, past.length - 1)
+
+    setFuture((prev) => [JSON.parse(JSON.stringify(components)), ...prev])
+    setPast(newPast)
+    setComponents(previous)
+    triggerAutoSave(previous)
+  }
+
+  const redo = () => {
+    if (future.length === 0) return
+    const next = future[0]
+    const newFuture = future.slice(1)
+
+    setPast((prev) => [...prev, JSON.parse(JSON.stringify(components))])
+    setFuture(newFuture)
+    setComponents(next)
+    triggerAutoSave(next)
+  }
 
   function showToast(message) {
     if (!message) return
@@ -506,6 +538,7 @@ export default function DrawControl() {
       transform: safeNext.transform
     })
 
+    pushHistory(components)
     setComponents((prev) => {
       const updated = prev.map((c) =>
         c.instanceId === safeNext.instanceId
@@ -531,6 +564,7 @@ export default function DrawControl() {
   }
 
   function deleteComponent(target) {
+    pushHistory(components)
     setComponents((prev) => {
       const updated = prev.filter((c) => c.instanceId !== target.instanceId)
 
@@ -570,6 +604,7 @@ export default function DrawControl() {
       (components || []).length
     )
 
+    pushHistory(components)
     setComponents((prev) => [...prev, next])
     setSelectedId(instanceId)
   }
@@ -619,6 +654,7 @@ export default function DrawControl() {
         (components || []).length
       )
 
+      pushHistory(components)
       setComponents((prev) => [...prev, next])
       setSelectedId(instanceId)
     } catch {
@@ -628,6 +664,7 @@ export default function DrawControl() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0f0c15] p-6">
+      <HistoryShortcuts undo={undo} redo={redo} />
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-xs font-semibold tracking-[0.22em] text-white/50">DRAW CONTROL</div>
