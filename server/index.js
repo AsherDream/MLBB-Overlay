@@ -410,8 +410,9 @@ app.get('/', (req, res) => {
 app.get('/api/server-info', (req, res) => {
   const local = '127.0.0.1';
   const network = getNetworkIPs();
+  const primaryNetworkIp = network.length > 0 ? network[0] : '127.0.0.1';
   const port = Number(process.env.PORT || 3000);
-  return res.json({ local, network, port });
+  return res.json({ local, network, port, primaryNetworkIp });
 });
 
 // Audio configuration (Task 1)
@@ -754,6 +755,11 @@ io.on('connection', (socket) => {
   socket.emit('STATE_SYNC', matchState);
   socket.emit('theme_update', theme);
   socket.emit('AUDIO_SYNC', audioConfig);
+
+  socket.on('overlay:update', (data) => {
+    // Broadcast to all other clients (the Overlay)
+    socket.broadcast.emit('OVERLAY_LIVE_UPDATE', data);
+  });
 
   socket.on('SET_ACTIVE_LAYOUT', ({ id }) => {
     const nextId = String(id || '').trim();

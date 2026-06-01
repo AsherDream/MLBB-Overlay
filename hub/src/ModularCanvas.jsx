@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { Rnd } from 'react-rnd'
-import SmartImageFrame from './components/SmartImageFrame.jsx'
 import RotationHandle from './components/RotationHandle.jsx'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
@@ -48,8 +47,11 @@ export default function ModularCanvas({
 }) {
   const viewportRef = useRef(null)
   const [scale, setScale] = useState(1)
+  const [editingMaskId, setEditingMaskId] = useState(null)
+  const [maskDragState, setMaskDragState] = useState(null)
   const sorted = useMemo(() => sortByZ(components || []), [components])
   const onScaleChangeRef = useRef(onScaleChange)
+  
   useEffect(() => {
     onScaleChangeRef.current = onScaleChange
   }, [onScaleChange])
@@ -120,6 +122,40 @@ export default function ModularCanvas({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [components, selectedId, onUpdate]);
 
+  // Mask Panning: Mouse Move Handler
+  useEffect(() => {
+    if (!maskDragState) return
+
+    const handleMouseMove = (e) => {
+      const component = maskDragState.component
+      const deltaX = e.clientX - maskDragState.startX
+      const deltaY = e.clientY - maskDragState.startY
+      const scaledDeltaX = deltaX / scale
+      const scaledDeltaY = deltaY / scale
+      
+      const normalizedTransform = normalizeTransform(component.transform)
+      const updatedTransform = {
+        ...normalizedTransform,
+        panX: (normalizedTransform.panX || 0) + scaledDeltaX,
+        panY: (normalizedTransform.panY || 0) + scaledDeltaY
+      }
+      
+      onUpdate?.({ ...component, transform: updatedTransform })
+    }
+
+    const handleMouseUp = () => {
+      setMaskDragState(null)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [maskDragState, scale, onUpdate])
+
   const getHeroImage = (c) => {
     if (!matchState) return null
     const idx = c.bind?.idx ?? 0
@@ -189,11 +225,12 @@ export default function ModularCanvas({
         {sorted.map((c, idx) => {
           const id = c.instanceId
           const isSelected = id === selectedId
+          const isEditingMask = editingMaskId === id
           const isEditing = editingCropId === id
           const z = 1 + clampInt(c.zIndex ?? idx, 0, 999)
           const normalizedTransform = normalizeTransform(c.transform)
           const imageSrc = getHeroImage(c)
-          const safeFrameRot = Number.isFinite(Number(c.frameRotation)) ? c.frameRotation : 0;
+          const safeFrameRot = Number.isFinite(Number(c.frameRotation)) ? c.frameRotation : 0
 
           return (
             <Rnd
@@ -204,8 +241,8 @@ export default function ModularCanvas({
               scale={scale}
               dragGrid={[1, 1]}
               resizeGrid={[1, 1]}
-              disableDragging={!!c.locked || isEditing}
-              enableResizing={!c.locked && !isEditing}
+              disableDragging={!!c.locked || isEditing || isEditingMask}
+              enableResizing={!c.locked && !isEditing && !isEditingMask}
               onMouseDown={(e) => {
                 e.stopPropagation()
                 onSelect?.(id)
@@ -231,43 +268,88 @@ export default function ModularCanvas({
               style={{ zIndex: z, opacity: c.visible === false ? 0 : 1 }}
             >
               <div
-                className={`h-full w-full overflow-hidden rounded-lg border ${
-                  isSelected ? 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.5)]' : 'border-white/10'
-                } bg-[#1a1625]/70`}
+                className={`h-full w-full rounded-lg bg-[#1a1625]/70 ${
+                  isEditingMask ? 'border-2 border-dashed' : 'border'
+                } ${
+                  isSelected ? (isEditingMask ? 'border-emerald-400/80' : 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.5)]') : 'border-white/10'
+                }`}
                 style={{
+                  overflow: isEditingMask ? 'visible' : 'hidden',
                   transform: `rotate(${safeFrameRot}deg)`,
                   transformOrigin: 'center center',
-                  transition: 'transform 0.1s ease-out'
+                  transition: isEditingMask ? 'none' : 'transform 0.1s ease-out'
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation()
+                  if (IMAGE_ATOMS.includes(c.atom)) {
+                    setEditingMaskId(isEditingMask ? null : id)
+                    onSelect?.(id)
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (isEditingMask && IMAGE_ATOMS.includes(c.atom)) {
+                    e.stopPropagation()
+                    setMaskDragState({
+                      component: c,
+                      startX: e.clientX,
+                      startY: e.clientY
+                    })
+                  }
                 }}
               >
-                <SmartImageFrame
-                  src={imageSrc}
-                  transform={normalizedTransform}
-                  isEditing={isEditing}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation()
-                    if (IMAGE_ATOMS.includes(c.atom)) {
-                      setEditingCropId?.(id)
-                      onSelect?.(id)
-                    }
-                  }}
-                  onTransformChange={(newTransform) => {
-                    onUpdate?.({ ...c, transform: newTransform })
-                  }}
-                />
-                <div className="absolute top-1 left-1 bg-black/60 px-1 rounded text-[9px] font-bold text-white/50">
-                  {c.alias || c.atom} {c.bind?.idx !== undefined ? `#${c.bind.idx + 1}` : ''}
-                </div>
+                {imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt="component"
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transformOrigin: 'center center',
+                      transform: `translate(-50%, -50%) translate(${normalizedTransform.panX || 0}px, ${normalizedTransform.panY || 0}px) scale(${normalizedTransform.scale || 1}) rotate(${normalizedTransform.rotation || 0}deg)`,
+                      opacity: isEditingMask ? 0.45 : 1,
+                      filter: isEditingMask ? 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' : 'none',
+                      pointerEvents: 'none',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      cursor: isEditingMask ? 'grab' : 'default'
+                    }}
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">
+                    No image
+                  </div>
+                )}
+
+                {isEditingMask && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 'inherit',
+                      border: '2px solid rgba(34, 197, 94, 0.6)',
+                      pointerEvents: 'none',
+                      zIndex: 10
+                    }}
+                  />
+                )}
               </div>
 
-              {/* Outer Frame Handle */}
-              {isSelected && !isEditing && (
+              {/* Outer Frame Rotation Handle */}
+              {isSelected && !isEditing && !isEditingMask && (
                 <RotationHandle
                   theme="purple"
                   currentRotation={c.frameRotation}
                   onRotate={(deg) => onUpdate?.({ ...c, frameRotation: deg })}
                 />
               )}
+
+              {/* Component Label */}
+              <div className="absolute top-1 left-1 bg-black/60 px-1 rounded text-[9px] font-bold text-white/50 pointer-events-none">
+                {c.alias || c.atom} {c.bind?.idx !== undefined ? `#${c.bind.idx + 1}` : ''}
+              </div>
             </Rnd>
           )
         })}

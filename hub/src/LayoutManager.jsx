@@ -8,16 +8,18 @@ function cx(...classes) {
   return classes.filter(Boolean).join(' ')
 }
 
-function getLanIpGuess() {
-  return '192.168.x.x'
-}
-
 export default function LayoutManager() {
   const navigate = useNavigate()
   const socketRef = useRef(null)
 
   const [layouts, setLayouts] = useState([])
   const [activeLayout, setActiveLayout] = useState('default_draft')
+  const [serverInfo, setServerInfo] = useState({
+    local: '127.0.0.1',
+    network: [],
+    port: 3000,
+    primaryNetworkIp: '127.0.0.1'
+  })
 
   useEffect(() => {
     const socket = io(SERVER_URL)
@@ -50,13 +52,39 @@ export default function LayoutManager() {
     }
   }, [])
 
+  useEffect(() => {
+    let mounted = true
+    async function fetchServerInfo() {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/server-info`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!mounted) return
+        if (data && typeof data === 'object') {
+          setServerInfo((prev) => ({
+            ...prev,
+            ...data,
+            primaryNetworkIp: data.primaryNetworkIp || window.location.hostname || '127.0.0.1'
+          }))
+        }
+      } catch {
+        // ignore network errors
+      }
+    }
+    fetchServerInfo()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   const overlayUrls = useMemo(() => {
     const id = encodeURIComponent(activeLayout || 'default_draft')
+    const lanIp = serverInfo.primaryNetworkIp || window.location.hostname || '127.0.0.1'
     return {
       localhost: `${SERVER_URL}/overlay/?id=${id}&follow=1`,
-      lan: `http://${getLanIpGuess()}:3000/overlay/?id=${id}`
+      lan: `http://${lanIp}:3000/overlay/?id=${id}`
     }
-  }, [activeLayout])
+  }, [activeLayout, serverInfo.primaryNetworkIp])
 
   async function setLive(id) {
     const res = await fetch(`${SERVER_URL}/api/active-layout`, {

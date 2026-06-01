@@ -100,6 +100,10 @@ function ensureComponentEl(domId, component) {
 
     const img = document.createElement('img')
     img.alt = ''
+    img.style.position = 'absolute'
+    img.style.top = '50%'
+    img.style.left = '50%'
+    img.style.transformOrigin = 'center center'
     el.appendChild(img)
 
     componentsLayer.appendChild(el)
@@ -114,10 +118,9 @@ function ensureComponentEl(domId, component) {
   el.style.height = `${Math.round(h)}px`
   el.style.overflow = 'hidden'
   el.style.display = component.visible === false ? 'none' : 'block'
+  el.style.position = 'absolute'
 
-  // Safely append outer frame rotation without infinitely compounding existing transforms
   const fRot = Number.isFinite(Number(component.frameRotation)) ? Number(component.frameRotation) : 0
-  // Remove any previous rotate() before applying the new one
   const baseTransform = (el.style.transform || '').replace(/rotate\([^)]+\)/g, '').trim()
   el.style.transform = `${baseTransform} rotate(${fRot}deg)`.trim()
   el.style.transformOrigin = 'center center'
@@ -286,17 +289,10 @@ function applyImageTransform(el, component) {
   if (lastValues.get(transformKey) === next) return
   lastValues.set(transformKey, next)
 
-  img.style.position = 'absolute'
-  img.style.top = '50%'
-  img.style.left = '50%'
-  img.style.transformOrigin = 'center center'
-
-  img.style.transform = `
-    translate(-50%, -50%)
-    translate(${safePanX}px, ${safePanY}px)
-    scale(${safeScale})
-    rotate(${safeRot}deg)
-  `
+  img.style.width = '100%'
+  img.style.height = '100%'
+  img.style.objectFit = 'cover'
+  img.style.transform = `translate(-50%, -50%) translate(${safePanX}px, ${safePanY}px) scale(${safeScale}) rotate(${safeRot}deg)`
 }
 
 export function triggerSlamAndAudio(component, state) {

@@ -11,7 +11,7 @@
     ],
     "picks": [
       "hanabi",
-      "arlot",
+      "faramis",
       "bane",
       "balmond",
       "aurora"
@@ -41,7 +41,7 @@
     ],
     "logo": "default_logo.png"
   },
-  "map": "broken_walls",
+  "map": "flying_clouds",
   "phase": "draft",
   "activeLayout": "default_draft"
 }
