@@ -66,14 +66,14 @@
           "idx": 0
         },
         "crop": {
-          "x": 24,
-          "y": 36,
+          "x": 55,
+          "y": 15,
           "scale": 1.95
         },
         "transform": {
           "scale": 1.95,
-          "panX": 24.26165276813628,
-          "panY": 36.00387944245248,
+          "panX": 55.35868703246108,
+          "panY": 15.27252326623595,
           "rotation": 0
         },
         "frameRotation": 3
@@ -467,8 +467,8 @@
       {
         "instanceId": "T2_BAN_1780301377217_efbec7efeaec18",
         "atom": "T2_BAN",
-        "x": 1198,
-        "y": 114,
+        "x": 1111,
+        "y": 111,
         "width": 320,
         "height": 434,
         "visible": true,
@@ -478,14 +478,14 @@
           "idx": 0
         },
         "crop": {
-          "x": -3,
-          "y": 3,
+          "x": -13,
+          "y": 13,
           "scale": 1
         },
         "transform": {
           "scale": 1,
-          "panX": -2.532714225411566,
-          "panY": 2.532714225411567,
+          "panX": -12.898392313519835,
+          "panY": 12.898392313519842,
           "rotation": 0
         },
         "frameRotation": 0

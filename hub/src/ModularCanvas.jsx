@@ -310,9 +310,12 @@ export default function ModularCanvas({
                       opacity: isEditingMask ? 0.45 : 1,
                       filter: isEditingMask ? 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' : 'none',
                       pointerEvents: 'none',
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
+                      // During mask editing: expand to full uncropped size; normal: constrain to frame
+                      width: isEditingMask ? 'auto' : '100%',
+                      height: isEditingMask ? 'auto' : '100%',
+                      objectFit: isEditingMask ? 'contain' : 'cover',
+                      minWidth: isEditingMask ? '100%' : 'auto',
+                      minHeight: isEditingMask ? '100%' : 'auto',
                       cursor: isEditingMask ? 'grab' : 'default'
                     }}
                     draggable={false}
