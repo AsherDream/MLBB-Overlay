@@ -6,7 +6,7 @@ import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
 import ModularCanvas from './ModularCanvas.jsx'
 import LayerProperties from './LayerProperties.jsx'
 import CropControlsSidebar from './components/CropControlsSidebar.jsx'
-import { defaultSizeForAtom, newInstanceId } from './atoms.js'
+import { defaultSizeForAtom, spawnSizeForAtom, newInstanceId } from './atoms.js'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 
@@ -597,7 +597,7 @@ export default function DrawControl() {
     if (!ok) return
 
     const instanceId = newInstanceId(base)
-    const size = defaultSizeForAtom(base)
+    const size = spawnSizeForAtom(base, editorTheme)
 
     const next = normalizeNewComponent(
       {
@@ -647,7 +647,7 @@ export default function DrawControl() {
       const y = clampInt(cy / s, 0, 1080)
 
       const instanceId = newInstanceId(base)
-      const size = defaultSizeForAtom(base)
+      const size = spawnSizeForAtom(base, editorTheme)
       const next = normalizeNewComponent(
         {
           instanceId,
@@ -948,6 +948,7 @@ export default function DrawControl() {
           <div className="flex flex-col min-w-0 gap-3 overflow-hidden" style={{ width: '300px' }}>
             <LayerProperties
               selected={selected}
+              theme={editorTheme}
               onChange={(next) => updateComponent(next)}
               onDelete={(t) => deleteComponent(t)}
             />

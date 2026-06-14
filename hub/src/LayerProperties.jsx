@@ -1,4 +1,5 @@
 import SmartInput from './SmartInput.jsx'
+import { getThemeFontFamily, getThemeFontSize } from './atoms.js'
 
 function clampInt(n, min, max) {
   const x = Number.isFinite(n) ? n : parseInt(String(n || '0'), 10)
@@ -32,7 +33,7 @@ function normalizeStyle(style) {
   return { ...style }
 }
 
-export default function LayerProperties({ selected, onChange, onDelete }) {
+export default function LayerProperties({ selected, onChange, onDelete, theme }) {
   if (!selected) {
     return (
       <aside className="h-full w-[320px] shrink-0 rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -64,6 +65,12 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
         ]
 
   const componentStyle = normalizeStyle(selected.style)
+  const themeFontSize = getThemeFontSize(selected.atom, theme)
+  const themeFontFamily = getThemeFontFamily(theme)
+  const hasFontSizeOverride = componentStyle.fontSize != null && componentStyle.fontSize !== ''
+  const hasFontFamilyOverride = Boolean(String(componentStyle.fontFamily || '').trim())
+  const resolvedFontSize = componentStyle.fontSize ?? themeFontSize ?? ''
+  const resolvedFontFamily = componentStyle.fontFamily ?? themeFontFamily ?? ''
 
   const patchStyle = (field, value) => {
     const nextStyle = { ...componentStyle }
@@ -189,21 +196,38 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
               <SmartInput
                 label="Font Size (px)"
                 type="number"
-                value={componentStyle.fontSize ?? ''}
+                value={resolvedFontSize}
+                inherited={!hasFontSizeOverride}
                 commitOn="blur"
                 onCommit={(v) => {
                   if (String(v ?? '').trim() === '') {
                     patchStyle('fontSize', null)
                     return
                   }
-                  patchStyle('fontSize', parseSafeInt(v, 8, 200))
+                  const parsed = parseSafeInt(v, 8, 200)
+                  if (parsed === themeFontSize && !hasFontSizeOverride) {
+                    return
+                  }
+                  if (parsed === themeFontSize) {
+                    patchStyle('fontSize', null)
+                    return
+                  }
+                  patchStyle('fontSize', parsed)
                 }}
               />
               <SmartInput
                 label="Font Family"
-                value={componentStyle.fontFamily ?? ''}
+                value={resolvedFontFamily}
+                inherited={!hasFontFamilyOverride}
                 commitOn="blur"
-                onCommit={(v) => patchStyle('fontFamily', String(v ?? '').trim() || null)}
+                onCommit={(v) => {
+                  const trimmed = String(v ?? '').trim()
+                  if (!trimmed || trimmed === themeFontFamily) {
+                    patchStyle('fontFamily', null)
+                    return
+                  }
+                  patchStyle('fontFamily', trimmed)
+                }}
               />
               <div>
                 <label className="text-[11px] font-semibold text-white/60">Text Align</label>

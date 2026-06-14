@@ -465,32 +465,6 @@
         "frameRotation": 0,
         "alias": "",
         "src": ""
-      },
-      {
-        "instanceId": "T1_NAME_1781450664190_f608b170e38ab",
-        "atom": "T1_NAME",
-        "x": 0,
-        "y": 0,
-        "width": 260,
-        "height": 40,
-        "visible": true,
-        "locked": false,
-        "zIndex": 16,
-        "bind": {},
-        "crop": {
-          "x": 0,
-          "y": 0,
-          "scale": 1
-        },
-        "transform": {
-          "scale": 1,
-          "panX": 0,
-          "panY": 0,
-          "rotation": 0
-        },
-        "frameRotation": 0,
-        "alias": "",
-        "src": ""
       }
     ]
   },

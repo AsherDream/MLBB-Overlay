@@ -16,6 +16,74 @@ export const ATOMS = [
   { atom: 'MAP', label: 'Map_Icon', kind: 'image' }
 ]
 
+export function isTextAtom(atom) {
+  const a = String(atom || '')
+  return a.includes('NAME') || a.includes('SCORE') || a === 'CUSTOM_TEXT'
+}
+
+export function getThemeFontSize(atom, theme) {
+  const typography = theme?.typography && typeof theme.typography === 'object' ? theme.typography : {}
+  const multiplier = Number(typography.fontSizeMultiplier)
+  const mult = Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1
+  const a = String(atom || '')
+
+  if (a.includes('PLAYER_NAME')) {
+    const base = Number(typography.playerNameSize)
+    return Math.round((Number.isFinite(base) && base > 0 ? base : 24) * mult)
+  }
+  if (a.includes('SCORE')) {
+    const base = Number(typography.scoreSize)
+    return Math.round((Number.isFinite(base) && base > 0 ? base : 40) * mult)
+  }
+  if (a.includes('NAME')) {
+    const base = Number(typography.teamNameSize)
+    return Math.round((Number.isFinite(base) && base > 0 ? base : 32) * mult)
+  }
+  return Math.round(16 * mult)
+}
+
+export function getThemeFontFamily(theme) {
+  const typography = theme?.typography && typeof theme.typography === 'object' ? theme.typography : {}
+  const fallback = String(typography.defaultFontFamily || 'Arial, sans-serif')
+  if (typography.useCustomFont && String(typography.fontFile || '').trim()) {
+    return `'MLBBThemeFont', ${fallback}`
+  }
+  return fallback
+}
+
+function clampSpawnDim(n, min, max) {
+  const x = Number.isFinite(n) ? n : min
+  return Math.max(min, Math.min(max, Math.round(x)))
+}
+
+export function proportionalSizeForTextAtom(atom, theme) {
+  const fontSize = getThemeFontSize(atom, theme)
+  const a = String(atom || '')
+
+  let widthMult = 3.5
+  const heightMult = 1.4
+
+  if (a.includes('PLAYER_NAME')) {
+    widthMult = 6
+  } else if (a.includes('NAME')) {
+    widthMult = 8
+  } else if (a.includes('SCORE')) {
+    widthMult = 3.5
+  }
+
+  return {
+    width: clampSpawnDim(fontSize * widthMult, 10, 1920),
+    height: clampSpawnDim(fontSize * heightMult, 10, 1080),
+  }
+}
+
+export function spawnSizeForAtom(atom, theme) {
+  if (isTextAtom(atom)) {
+    return proportionalSizeForTextAtom(atom, theme)
+  }
+  return defaultSizeForAtom(atom)
+}
+
 export function defaultSizeForAtom(atom) {
   const a = String(atom || '')
   if (a.includes('PICK') || a.includes('BAN')) return { width: 120, height: 120 }

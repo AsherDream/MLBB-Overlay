@@ -13,6 +13,7 @@ function SmartInput(
     onFocus,
     debounceMs = 300,
     commitOn = 'blur',
+    inherited = false,
   },
   ref
 ) {
@@ -86,8 +87,11 @@ function SmartInput(
     }
   }
 
-  const inputClassName =
-    'h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none placeholder:text-white/30 focus:border-[#7c3aed]'
+  const inputClassName = inherited
+    ? 'h-9 w-full rounded-lg border border-dashed border-white/15 bg-[#1a1625]/80 px-3 text-sm text-white/50 outline-none placeholder:text-white/30 focus:border-[#7c3aed] focus:text-white/90'
+    : 'h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none placeholder:text-white/30 focus:border-[#7c3aed]'
+
+  const labelSuffix = inherited ? ' (theme)' : ''
 
   const inputEl =
     type === 'number' ? (
@@ -121,7 +125,10 @@ function SmartInput(
   if (label) {
     return (
       <label className="block">
-        <span className="text-[11px] font-semibold text-white/60">{label}</span>
+        <span className="text-[11px] font-semibold text-white/60">
+          {label}
+          {inherited ? <span className="text-white/35">{labelSuffix}</span> : null}
+        </span>
         <div className="mt-1">{inputEl}</div>
       </label>
     )
