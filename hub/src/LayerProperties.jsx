@@ -6,6 +6,32 @@ function clampInt(n, min, max) {
   return Math.max(min, Math.min(max, Math.trunc(x)))
 }
 
+function parseSafeInt(inputValue, min, max) {
+  const cleanVal = parseInt(inputValue, 10)
+  const finalVal = Number.isNaN(cleanVal) ? 0 : cleanVal
+  return clampInt(finalVal, min, max)
+}
+
+function parseSafeFloat(inputValue, min, max, fallback) {
+  const cleanVal = parseFloat(inputValue)
+  const finalVal = Number.isNaN(cleanVal) ? fallback : cleanVal
+  return Math.max(min, Math.min(max, finalVal))
+}
+
+function isTextStyleAtom(atom) {
+  const a = String(atom || '')
+  return (
+    a.includes('NAME') ||
+    a.includes('SCORE') ||
+    a === 'CUSTOM_TEXT'
+  )
+}
+
+function normalizeStyle(style) {
+  if (!style || typeof style !== 'object') return {}
+  return { ...style }
+}
+
 export default function LayerProperties({ selected, onChange, onDelete }) {
   if (!selected) {
     return (
@@ -37,6 +63,22 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
           { x: 0, y: selected.height ?? 0 }
         ]
 
+  const componentStyle = normalizeStyle(selected.style)
+
+  const patchStyle = (field, value) => {
+    const nextStyle = { ...componentStyle }
+    if (value === '' || value == null) {
+      delete nextStyle[field]
+    } else {
+      nextStyle[field] = value
+    }
+    const hasKeys = Object.keys(nextStyle).length > 0
+    onChange?.({
+      ...selected,
+      style: hasKeys ? nextStyle : undefined
+    })
+  }
+
   return (
     <aside
       className="h-full w-[320px] shrink-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3"
@@ -54,22 +96,25 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
       <div className="mt-3 space-y-2">
         <SmartInput
           label="Alias"
-          value={selected.alias || ''}
-          onDebouncedChange={(v) => onChange?.({ ...selected, alias: String(v || '') })}
+          value={selected.alias ?? ''}
+          commitOn="blur"
+          onCommit={(v) => onChange?.({ ...selected, alias: String(v ?? '') })}
         />
 
         <div className="grid grid-cols-2 gap-2">
           <SmartInput
             label="X"
             type="number"
-            value={selected.x}
-            onDebouncedChange={(v) => onChange?.({ ...selected, x: clampInt(Number(v), 0, 1920) })}
+            value={selected.x ?? 0}
+            commitOn="blur"
+            onCommit={(v) => onChange?.({ ...selected, x: parseSafeInt(v, 0, 1920) })}
           />
           <SmartInput
             label="Y"
             type="number"
-            value={selected.y}
-            onDebouncedChange={(v) => onChange?.({ ...selected, y: clampInt(Number(v), 0, 1080) })}
+            value={selected.y ?? 0}
+            commitOn="blur"
+            onCommit={(v) => onChange?.({ ...selected, y: parseSafeInt(v, 0, 1080) })}
           />
         </div>
 
@@ -77,26 +122,30 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
           <SmartInput
             label="W"
             type="number"
-            value={selected.width}
-            onDebouncedChange={(v) => onChange?.({ ...selected, width: clampInt(Number(v), 10, 1920) })}
+            value={selected.width ?? 0}
+            commitOn="blur"
+            onCommit={(v) => onChange?.({ ...selected, width: parseSafeInt(v, 10, 1920) })}
           />
           <SmartInput
             label="H"
             type="number"
-            value={selected.height}
-            onDebouncedChange={(v) => onChange?.({ ...selected, height: clampInt(Number(v), 10, 1080) })}
+            value={selected.height ?? 0}
+            commitOn="blur"
+            onCommit={(v) => onChange?.({ ...selected, height: parseSafeInt(v, 10, 1080) })}
           />
         </div>
 
-        {/* New Frame Rotation Control */}
         <div className="mt-2">
           <SmartInput
             label="Frame Rotation (deg)"
             type="number"
             value={selected.frameRotation ?? 0}
-            onDebouncedChange={(v) => {
-              const rot = Number(v);
-              onChange?.({ ...selected, frameRotation: Number.isFinite(rot) ? rot : 0 });
+            commitOn="blur"
+            onCommit={(v) => {
+              onChange?.({
+                ...selected,
+                frameRotation: parseSafeFloat(v, -360, 360, 0)
+              })
             }}
           />
         </div>
@@ -124,13 +173,53 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
           label="Z-Index"
           type="number"
           value={selected.zIndex ?? 0}
-          onDebouncedChange={(v) =>
+          commitOn="blur"
+          onCommit={(v) =>
             onChange?.({
               ...selected,
-              zIndex: clampInt(Number(v), -999, 999)
+              zIndex: parseSafeInt(v, -999, 999)
             })
           }
         />
+
+        {isTextStyleAtom(selected.atom) ? (
+          <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">TEXT STYLE</div>
+            <div className="mt-2 space-y-2">
+              <SmartInput
+                label="Font Size (px)"
+                type="number"
+                value={componentStyle.fontSize ?? ''}
+                commitOn="blur"
+                onCommit={(v) => {
+                  if (String(v ?? '').trim() === '') {
+                    patchStyle('fontSize', null)
+                    return
+                  }
+                  patchStyle('fontSize', parseSafeInt(v, 8, 200))
+                }}
+              />
+              <SmartInput
+                label="Font Family"
+                value={componentStyle.fontFamily ?? ''}
+                commitOn="blur"
+                onCommit={(v) => patchStyle('fontFamily', String(v ?? '').trim() || null)}
+              />
+              <div>
+                <label className="text-[11px] font-semibold text-white/60">Text Align</label>
+                <select
+                  value={componentStyle.textAlign ?? 'left'}
+                  onChange={(e) => patchStyle('textAlign', e.target.value)}
+                  className="mt-1 h-9 w-full rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {String(selected.atom || '').includes('PLAYER_NAME') ||
         String(selected.atom || '').includes('PICK') ||
@@ -142,7 +231,7 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
               <select
                 value={idx}
                 onChange={(e) => {
-                  const nextIdx = clampInt(Number(e.target.value), 0, 4)
+                  const nextIdx = parseSafeInt(e.target.value, 0, 4)
                   onChange?.({
                     ...selected,
                     bind: { ...bind, idx: nextIdx }
@@ -167,12 +256,13 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
               label="X"
               type="number"
               value={crop.x}
-              onDebouncedChange={(v) =>
+              commitOn="blur"
+              onCommit={(v) =>
                 onChange?.({
                   ...selected,
                   crop: {
                     ...crop,
-                    x: clampInt(Number(v), -1000, 1000)
+                    x: parseSafeInt(v, -1000, 1000)
                   }
                 })
               }
@@ -181,12 +271,13 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
               label="Y"
               type="number"
               value={crop.y}
-              onDebouncedChange={(v) =>
+              commitOn="blur"
+              onCommit={(v) =>
                 onChange?.({
                   ...selected,
                   crop: {
                     ...crop,
-                    y: clampInt(Number(v), -1000, 1000)
+                    y: parseSafeInt(v, -1000, 1000)
                   }
                 })
               }
@@ -195,14 +286,14 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
               label="Scale"
               type="number"
               value={crop.scale}
-              onDebouncedChange={(v) => {
-                const raw = Number(v)
-                const safe = Number.isFinite(raw) && raw > 0 ? raw : 1
+              commitOn="blur"
+              onCommit={(v) => {
+                const safe = parseSafeFloat(v, 0.1, 4, 1)
                 onChange?.({
                   ...selected,
                   crop: {
                     ...crop,
-                    scale: Math.max(0.1, Math.min(4, safe))
+                    scale: safe
                   }
                 })
               }}
@@ -219,12 +310,13 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
                   label={`P${i + 1} X`}
                   type="number"
                   value={p.x}
-                  onDebouncedChange={(v) => {
+                  commitOn="blur"
+                  onCommit={(v) => {
                     const next = baseMask.map((pt, idx) =>
                       idx === i
                         ? {
                             ...pt,
-                            x: clampInt(Number(v), -1000, 3000)
+                            x: parseSafeInt(v, -1000, 3000)
                           }
                         : pt
                     )
@@ -238,12 +330,13 @@ export default function LayerProperties({ selected, onChange, onDelete }) {
                   label={`P${i + 1} Y`}
                   type="number"
                   value={p.y}
-                  onDebouncedChange={(v) => {
+                  commitOn="blur"
+                  onCommit={(v) => {
                     const next = baseMask.map((pt, idx) =>
                       idx === i
                         ? {
                             ...pt,
-                            y: clampInt(Number(v), -1000, 3000)
+                            y: parseSafeInt(v, -1000, 3000)
                           }
                         : pt
                     )

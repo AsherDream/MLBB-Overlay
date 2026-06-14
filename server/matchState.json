@@ -41,7 +41,7 @@
     ],
     "logo": "default_logo.png"
   },
-  "map": "flying_clouds",
+  "map": "dangerous_grass",
   "phase": "draft",
   "activeLayout": "default_draft"
 }

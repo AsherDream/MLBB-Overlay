@@ -32,7 +32,16 @@ const componentSchema = z.object({
   }).optional(),
 
   // New property for rotating the entire component frame
-  frameRotation: z.number().default(0).optional()
+  frameRotation: z.number().default(0).optional(),
+
+  alias: z.string().optional(),
+  src: z.string().optional(),
+
+  style: z.object({
+    fontSize: z.number().optional(),
+    fontFamily: z.string().optional(),
+    textAlign: z.enum(['left', 'center', 'right']).optional(),
+  }).optional(),
 });
 
 // 2. Flexible Match State Schema

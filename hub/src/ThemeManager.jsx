@@ -6,7 +6,11 @@ const DEFAULT_THEME = {
   typography: {
     fontFile: '',
     useCustomFont: false,
-    fontSizeMultiplier: 1.0
+    fontSizeMultiplier: 1.0,
+    defaultFontFamily: 'Arial, sans-serif',
+    playerNameSize: 24,
+    teamNameSize: 32,
+    scoreSize: 40
   },
   images: {
     heroPickBg: '',
@@ -251,7 +255,7 @@ export default function ThemeManager() {
             <span className="text-xs font-bold text-white/80">Use Custom Font</span>
             <input
               type="checkbox"
-              checked={theme.typography?.useCustomFont}
+              checked={!!theme.typography?.useCustomFont}
               onChange={(e) => setNested('typography', 'useCustomFont', e.target.checked)}
               className="w-4 h-4"
             />
@@ -263,14 +267,71 @@ export default function ThemeManager() {
               min="0.5"
               max="3"
               step="0.1"
-              value={theme.typography?.fontSizeMultiplier}
-              onChange={(e) => setNested('typography', 'fontSizeMultiplier', Number(e.target.value))}
+              value={theme.typography?.fontSizeMultiplier ?? 1}
+              onChange={(e) => {
+                const raw = parseFloat(e.target.value)
+                setNested('typography', 'fontSizeMultiplier', Number.isNaN(raw) ? 1 : raw)
+              }}
+              className="w-20 h-9 rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2 md:col-span-2">
+            <span className="text-xs font-bold text-white/80">Default Font Family</span>
+            <input
+              type="text"
+              value={theme.typography?.defaultFontFamily ?? 'Arial, sans-serif'}
+              onChange={(e) => setNested('typography', 'defaultFontFamily', e.target.value)}
+              className="w-full max-w-xs h-9 rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <span className="text-xs font-bold text-white/80">Team Name Size (px)</span>
+            <input
+              type="number"
+              min="8"
+              max="200"
+              step="1"
+              value={theme.typography?.teamNameSize ?? 32}
+              onChange={(e) => {
+                const cleanVal = parseInt(e.target.value, 10)
+                setNested('typography', 'teamNameSize', Number.isNaN(cleanVal) ? 32 : cleanVal)
+              }}
+              className="w-20 h-9 rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <span className="text-xs font-bold text-white/80">Player Name Size (px)</span>
+            <input
+              type="number"
+              min="8"
+              max="200"
+              step="1"
+              value={theme.typography?.playerNameSize ?? 24}
+              onChange={(e) => {
+                const cleanVal = parseInt(e.target.value, 10)
+                setNested('typography', 'playerNameSize', Number.isNaN(cleanVal) ? 24 : cleanVal)
+              }}
+              className="w-20 h-9 rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0c15] px-3 py-2">
+            <span className="text-xs font-bold text-white/80">Score Size (px)</span>
+            <input
+              type="number"
+              min="8"
+              max="200"
+              step="1"
+              value={theme.typography?.scoreSize ?? 40}
+              onChange={(e) => {
+                const cleanVal = parseInt(e.target.value, 10)
+                setNested('typography', 'scoreSize', Number.isNaN(cleanVal) ? 40 : cleanVal)
+              }}
               className="w-20 h-9 rounded-lg border border-white/10 bg-[#1a1625] px-3 text-sm text-white/90 outline-none"
             />
           </label>
           <FontUploader
             label="Font File"
-            value={theme.typography?.fontFile}
+            value={theme.typography?.fontFile ?? ''}
             onChange={(v) => setNested('typography', 'fontFile', v)}
           />
         </div>

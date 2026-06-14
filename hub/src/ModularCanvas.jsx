@@ -7,6 +7,7 @@ const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
 const BASE_W = 1920
 const BASE_H = 1080
 const IMAGE_ATOMS = ['T1_PICK', 'T2_PICK', 'T1_BAN', 'T2_BAN', 'T1_LOGO', 'T2_LOGO', 'MAP', 'CUSTOM_IMAGE']
+const TEXT_ATOMS = ['T1_NAME', 'T2_NAME', 'T1_SCORE', 'T2_SCORE', 'T1_PLAYER_NAME', 'T2_PLAYER_NAME']
 
 function clampInt(n, min, max) {
   const x = Number.isFinite(n) ? n : 0
@@ -42,6 +43,7 @@ export default function ModularCanvas({
   onScaleChange,
   recalcTrigger,
   matchState,
+  theme,
   editingCropId,
   setEditingCropId,
   onDropFile,
@@ -178,6 +180,61 @@ export default function ModularCanvas({
     return `${SERVER_URL}/Assets/HeroPick/${encodeURIComponent(String(heroId).toLowerCase())}.png`
   }
 
+  const getTextValue = (c) => {
+    if (!matchState) return ''
+    const idx = c.bind?.idx ?? 0
+    if (c.atom === 'T1_NAME') return matchState.blueTeam?.name ?? ''
+    if (c.atom === 'T2_NAME') return matchState.redTeam?.name ?? ''
+    if (c.atom === 'T1_SCORE') return String(matchState.blueTeam?.score ?? '')
+    if (c.atom === 'T2_SCORE') return String(matchState.redTeam?.score ?? '')
+    if (c.atom === 'T1_PLAYER_NAME') return matchState.blueTeam?.players?.[idx] ?? ''
+    if (c.atom === 'T2_PLAYER_NAME') return matchState.redTeam?.players?.[idx] ?? ''
+    return ''
+  }
+
+  const getThemeFontFamily = () => {
+    const typography = theme?.typography && typeof theme.typography === 'object' ? theme.typography : {}
+    if (typography.useCustomFont && String(typography.fontFile || '').trim()) {
+      return "'MLBBThemeFont', Arial, sans-serif"
+    }
+    return String(typography.defaultFontFamily || 'Arial, sans-serif')
+  }
+
+  const getThemeFontSize = (atom) => {
+    const typography = theme?.typography && typeof theme.typography === 'object' ? theme.typography : {}
+    const multiplier = Number(typography.fontSizeMultiplier)
+    const mult = Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1
+    const a = String(atom || '')
+    if (a.includes('PLAYER_NAME')) return (Number(typography.playerNameSize) || 24) * mult
+    if (a.includes('SCORE')) return (Number(typography.scoreSize) || 40) * mult
+    if (a.includes('NAME')) return (Number(typography.teamNameSize) || 32) * mult
+    return 16 * mult
+  }
+
+  const getTextStyle = (c) => {
+    const textAlign = c.style?.textAlign || 'left'
+    const fontSize = Number(c.style?.fontSize) > 0 ? Number(c.style.fontSize) : getThemeFontSize(c.atom)
+    const fontFamily = String(c.style?.fontFamily || '').trim() || getThemeFontFamily()
+    return {
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : 'flex-start',
+      fontSize: `${fontSize}px`,
+      fontFamily,
+      textAlign,
+      color: '#ffffff',
+      fontWeight: 'bold',
+      textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
+      padding: '0 4px',
+      pointerEvents: 'none'
+    }
+  }
+
   const handleDragOver = (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -305,7 +362,9 @@ export default function ModularCanvas({
           const isEditing = editingCropId === id
           const z = 1 + clampInt(c.zIndex ?? idx, 0, 999)
           const normalizedTransform = normalizeTransform(c.transform)
-          const imageSrc = getHeroImage(c)
+          const isTextAtom = TEXT_ATOMS.includes(c.atom)
+          const imageSrc = isTextAtom ? null : getHeroImage(c)
+          const textValue = isTextAtom ? getTextValue(c) : ''
           const safeFrameRot = Number.isFinite(Number(c.frameRotation)) ? c.frameRotation : 0
 
           return (
@@ -373,7 +432,11 @@ export default function ModularCanvas({
                   }
                 }}
               >
-                {imageSrc ? (
+                {isTextAtom ? (
+                  <div style={getTextStyle(c)}>
+                    {textValue || c.alias || c.atom}
+                  </div>
+                ) : imageSrc ? (
                   <img
                     src={imageSrc}
                     alt="component"
@@ -386,7 +449,6 @@ export default function ModularCanvas({
                       opacity: isEditingMask ? 0.45 : 1,
                       filter: isEditingMask ? 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' : 'none',
                       pointerEvents: 'none',
-                      // During mask editing: expand to full uncropped size; normal: constrain to frame
                       width: isEditingMask ? 'auto' : '100%',
                       height: isEditingMask ? 'auto' : '100%',
                       objectFit: isEditingMask ? 'contain' : 'cover',

@@ -85,6 +85,10 @@ function createDefaultTheme() {
       fontFile: '',
       useCustomFont: false,
       fontSizeMultiplier: 1.0,
+      defaultFontFamily: 'Arial, sans-serif',
+      playerNameSize: 24,
+      teamNameSize: 32,
+      scoreSize: 40,
     },
     images: {
       heroPickBg: '',

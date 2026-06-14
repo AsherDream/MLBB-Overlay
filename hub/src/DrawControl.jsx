@@ -62,6 +62,24 @@ function normalizeTransform(transform) {
   }
 }
 
+function normalizeComponentStyle(style) {
+  if (!style || typeof style !== 'object') return undefined
+  const out = {}
+  const fontSize = Number(style.fontSize)
+  if (Number.isFinite(fontSize) && fontSize > 0) {
+    out.fontSize = Math.round(fontSize)
+  }
+  const fontFamily = String(style.fontFamily || '').trim()
+  if (fontFamily) {
+    out.fontFamily = fontFamily
+  }
+  const textAlign = String(style.textAlign || '')
+  if (textAlign === 'left' || textAlign === 'center' || textAlign === 'right') {
+    out.textAlign = textAlign
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 function normalizeNewComponent(c, fallbackZ) {
   const size = defaultSizeForAtom(c?.atom)
   const rawBind = c?.bind && typeof c.bind === 'object' ? c.bind : {}
@@ -115,7 +133,8 @@ function normalizeNewComponent(c, fallbackZ) {
     ),
     crop,
     frameRotation: Number.isFinite(c?.frameRotation) ? c.frameRotation : 0,
-    maskPoints
+    maskPoints,
+    style: normalizeComponentStyle(c?.style)
   }
 }
 
@@ -157,6 +176,7 @@ export default function DrawControl() {
   const [assetLibrary, setAssetLibrary] = useState([])
   const [assetLibraryOpen, setAssetLibraryOpen] = useState(false)
   const [isLoadingAssets, setIsLoadingAssets] = useState(false)
+  const [editorTheme, setEditorTheme] = useState(null)
   const toastTimeoutRef = useRef(null)
   const saveTimeoutRef = useRef(null)
 
@@ -315,6 +335,26 @@ export default function DrawControl() {
   }, [layoutId, assetLibraryOpen, loadAssetLibrary])
 
   useEffect(() => {
+    let mounted = true
+    async function loadTheme() {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/theme`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (mounted && data?.theme) {
+          setEditorTheme(data.theme)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadTheme()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) {
         window.clearTimeout(toastTimeoutRef.current)
@@ -358,7 +398,8 @@ export default function DrawControl() {
                 x: Number.isFinite(p.x) ? Math.round(p.x) : 0,
                 y: Number.isFinite(p.y) ? Math.round(p.y) : 0
               }))
-            : undefined
+            : undefined,
+        style: normalizeComponentStyle(c.style)
       }))
     }
   }
@@ -877,6 +918,7 @@ export default function DrawControl() {
             onScaleChange={setScale}
             recalcTrigger={sidebarCollapsed}
             matchState={matchState}
+            theme={editorTheme}
             editingCropId={editingCropId}
             setEditingCropId={setEditingCropId}
             onDropFile={handleAssetDrop}

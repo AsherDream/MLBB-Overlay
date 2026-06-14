@@ -169,6 +169,9 @@ async function bootstrap() {
       }
     }
     reapplyVisualLayers()
+    if (currentState && currentLayout) {
+      renderOverlay(currentState, currentLayout)
+    }
   })
 
   socket.on('LAYOUT_UPDATE', (layoutIdPayload) => {

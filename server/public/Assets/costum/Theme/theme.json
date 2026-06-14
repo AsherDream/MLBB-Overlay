@@ -2,7 +2,8 @@
   "typography": {
     "fontFile": "",
     "useCustomFont": false,
-    "fontSizeMultiplier": 10
+    "fontSizeMultiplier": 10,
+    "teamNameSize": 10
   },
   "images": {
     "heroPickBg": "",
@@ -11,7 +12,7 @@
     "masterFrame": ""
   },
   "colors": {
-    "bluePrimary": "#00d2ff",
+    "bluePrimary": "#4590a1",
     "blueDark": "#003e4d",
     "redPrimary": "#ff2a2a",
     "redDark": "#4d0000",

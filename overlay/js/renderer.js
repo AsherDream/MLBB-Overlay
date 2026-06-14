@@ -31,6 +31,17 @@ let previousBans = {
 }
 
 let isFirstRender = true
+let activeTheme = null
+
+const TEXT_ATOMS = new Set([
+  'T1_NAME',
+  'T2_NAME',
+  'T1_SCORE',
+  'T2_SCORE',
+  'T1_PLAYER_NAME',
+  'T2_PLAYER_NAME',
+  'CUSTOM_TEXT',
+])
 
 // ─────────────────────────────────────────────────────────────
 // Theme injection (Hub theme.json → CSS variables + layers)
@@ -84,6 +95,8 @@ function removeThemeFontFace() {
 export function applyThemeStyles(themeData) {
   if (!themeData || typeof themeData !== 'object') return
 
+  activeTheme = themeData
+
   const colors = themeData.colors && typeof themeData.colors === 'object' ? themeData.colors : {}
   THEME_COLOR_KEYS.forEach((key) => {
     const value = colors[key]
@@ -101,19 +114,36 @@ export function applyThemeStyles(themeData) {
   const typography =
     themeData.typography && typeof themeData.typography === 'object' ? themeData.typography : {}
   const fontMultiplier = Number(typography.fontSizeMultiplier)
+  const safeMultiplier = Number.isFinite(fontMultiplier) && fontMultiplier > 0 ? fontMultiplier : 1
+  setCssVar('--font-size-multiplier', safeMultiplier)
+
+  const teamNameSize = Number(typography.teamNameSize)
+  const playerNameSize = Number(typography.playerNameSize)
+  const scoreSize = Number(typography.scoreSize)
   setCssVar(
-    '--font-size-multiplier',
-    Number.isFinite(fontMultiplier) && fontMultiplier > 0 ? fontMultiplier : 1
+    '--theme-teamNameSize',
+    `${Number.isFinite(teamNameSize) && teamNameSize > 0 ? teamNameSize : 32}px`
   )
+  setCssVar(
+    '--theme-playerNameSize',
+    `${Number.isFinite(playerNameSize) && playerNameSize > 0 ? playerNameSize : 24}px`
+  )
+  setCssVar(
+    '--theme-scoreSize',
+    `${Number.isFinite(scoreSize) && scoreSize > 0 ? scoreSize : 40}px`
+  )
+
+  const defaultFontFamily = String(typography.defaultFontFamily || 'Arial, sans-serif')
+  setCssVar('--theme-defaultFontFamily', defaultFontFamily)
 
   const useCustomFont = Boolean(typography.useCustomFont)
   const fontFile = String(typography.fontFile || '').trim()
   if (useCustomFont && fontFile) {
     ensureThemeFontFace(fontFile)
-    setCssVar('--main-font', "'MLBBThemeFont', Arial, sans-serif")
+    setCssVar('--main-font', `'MLBBThemeFont', ${defaultFontFamily}`)
   } else {
     removeThemeFontFace()
-    setCssVar('--main-font', 'Arial, sans-serif')
+    setCssVar('--main-font', defaultFontFamily)
   }
 
   const toggles = themeData.toggles && typeof themeData.toggles === 'object' ? themeData.toggles : {}
@@ -219,20 +249,27 @@ function componentDomId(component) {
 
 function ensureComponentEl(domId, component) {
   let el = document.getElementById(domId)
+  const atom = String(component?.atom || '')
+  const isText = TEXT_ATOMS.has(atom)
+
   if (!el) {
     el = document.createElement('div')
     el.id = domId
-    el.className = 'component'
+    el.className = isText ? 'component text' : 'component'
 
-    const img = document.createElement('img')
-    img.alt = ''
-    img.style.position = 'absolute'
-    img.style.top = '50%'
-    img.style.left = '50%'
-    img.style.transformOrigin = 'center center'
-    el.appendChild(img)
+    if (!isText) {
+      const img = document.createElement('img')
+      img.alt = ''
+      img.style.position = 'absolute'
+      img.style.top = '50%'
+      img.style.left = '50%'
+      img.style.transformOrigin = 'center center'
+      el.appendChild(img)
+    }
 
     componentsLayer.appendChild(el)
+  } else if (isText) {
+    el.classList.add('text')
   }
 
   const w = typeof component?.width === 'number' ? component.width : 0
@@ -264,14 +301,90 @@ function getImgTarget(id) {
   return { el, img }
 }
 
-function setTextIfExists(id, text) {
+function resolveTextFontSize(component, atom) {
+  const customSize = Number(component?.style?.fontSize)
+  if (Number.isFinite(customSize) && customSize > 0) {
+    return Math.round(customSize)
+  }
+
+  const typography =
+    activeTheme?.typography && typeof activeTheme.typography === 'object' ? activeTheme.typography : {}
+  const multiplier = Number(typography.fontSizeMultiplier)
+  const mult = Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1
+  const a = String(atom || '')
+
+  if (a.includes('PLAYER_NAME')) {
+    const base = Number(typography.playerNameSize)
+    return Math.round((Number.isFinite(base) && base > 0 ? base : 24) * mult)
+  }
+  if (a.includes('SCORE')) {
+    const base = Number(typography.scoreSize)
+    return Math.round((Number.isFinite(base) && base > 0 ? base : 40) * mult)
+  }
+  if (a.includes('NAME')) {
+    const base = Number(typography.teamNameSize)
+    return Math.round((Number.isFinite(base) && base > 0 ? base : 32) * mult)
+  }
+  return Math.round(16 * mult)
+}
+
+function resolveTextFontFamily(component) {
+  const override = String(component?.style?.fontFamily || '').trim()
+  if (override) return override
+
+  const typography =
+    activeTheme?.typography && typeof activeTheme.typography === 'object' ? activeTheme.typography : {}
+  if (typography.useCustomFont && String(typography.fontFile || '').trim()) {
+    const fallback = String(typography.defaultFontFamily || 'Arial, sans-serif')
+    return `'MLBBThemeFont', ${fallback}`
+  }
+  return String(typography.defaultFontFamily || 'Arial, sans-serif')
+}
+
+function applyTextStyles(el, component, atom) {
+  if (!el) return
+
+  const fontSize = resolveTextFontSize(component, atom)
+  const fontFamily = resolveTextFontFamily(component)
+  const textAlign = component?.style?.textAlign || 'left'
+  const styleKey = `${el.id}::textStyle`
+  const next = JSON.stringify({ fontSize, fontFamily, textAlign })
+
+  el.classList.add('text')
+
+  if (lastValues.get(styleKey) === next) return
+  lastValues.set(styleKey, next)
+
+  el.style.fontSize = `${fontSize}px`
+  el.style.fontFamily = fontFamily
+  el.style.textAlign = textAlign
+  el.style.display = 'flex'
+  el.style.alignItems = 'center'
+  el.style.width = '100%'
+  el.style.height = '100%'
+  el.style.overflow = 'hidden'
+  el.style.fontWeight = 'bold'
+  el.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)'
+
+  if (textAlign === 'right') {
+    el.style.justifyContent = 'flex-end'
+  } else if (textAlign === 'center') {
+    el.style.justifyContent = 'center'
+  } else {
+    el.style.justifyContent = 'flex-start'
+  }
+}
+
+function setTextIfExists(id, text, component, atom) {
   const el = document.getElementById(id)
   if (!el) return
   const v = String(text ?? '')
   const key = `${id}::text`
-  if (lastValues.get(key) === v) return
-  el.textContent = v
-  lastValues.set(key, v)
+  if (lastValues.get(key) !== v) {
+    el.textContent = v
+    lastValues.set(key, v)
+  }
+  applyTextStyles(el, component, atom)
 }
 
 function setImageIfExists(id, src, visible) {
@@ -507,7 +620,7 @@ export function renderOverlay(state, layout) {
       // Reactive transform sync (cached for performance)
       applyImageTransform(el, component)
     } else {
-      setTextIfExists(domId, result.value)
+      setTextIfExists(domId, result.value, component, component.atom)
     }
   }
 
