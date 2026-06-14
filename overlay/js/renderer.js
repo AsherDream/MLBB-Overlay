@@ -33,6 +33,132 @@ let previousBans = {
 let isFirstRender = true
 
 // ─────────────────────────────────────────────────────────────
+// Theme injection (Hub theme.json → CSS variables + layers)
+// ─────────────────────────────────────────────────────────────
+
+const THEME_COLOR_KEYS = [
+  'bluePrimary',
+  'blueDark',
+  'redPrimary',
+  'redDark',
+  'scoreBlue',
+  'scoreRed',
+  'playerName',
+  'phaseText',
+  'auraBan',
+  'auraPick',
+]
+
+function themeAssetUrl(filename, subdir) {
+  const s = String(filename || '').trim()
+  if (!s) return ''
+  if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/')) return s
+  return `${SERVER_URL}/Assets/costum/Theme/${subdir}/${encodeURIComponent(s)}`
+}
+
+function ensureThemeFontFace(fontFile) {
+  const url = themeAssetUrl(fontFile, 'fonts')
+  if (!url) return
+
+  let el = document.getElementById('mlbb-theme-font-face')
+  if (!el) {
+    el = document.createElement('style')
+    el.id = 'mlbb-theme-font-face'
+    document.head.appendChild(el)
+  }
+
+  el.textContent = `
+    @font-face {
+      font-family: 'MLBBThemeFont';
+      src: url("${cacheBust(url)}") format('opentype'), url("${cacheBust(url)}") format('truetype');
+      font-display: swap;
+    }
+  `
+}
+
+function removeThemeFontFace() {
+  const el = document.getElementById('mlbb-theme-font-face')
+  if (el) el.textContent = ''
+}
+
+export function applyThemeStyles(themeData) {
+  if (!themeData || typeof themeData !== 'object') return
+
+  const colors = themeData.colors && typeof themeData.colors === 'object' ? themeData.colors : {}
+  THEME_COLOR_KEYS.forEach((key) => {
+    const value = colors[key]
+    if (value == null || value === '') return
+    setCssVar(`--theme-${key}`, value)
+  })
+
+  if (colors.bluePrimary) {
+    setCssVar('--primary-color', colors.bluePrimary)
+  }
+  if (colors.redPrimary) {
+    setCssVar('--secondary-color', colors.redPrimary)
+  }
+
+  const typography =
+    themeData.typography && typeof themeData.typography === 'object' ? themeData.typography : {}
+  const fontMultiplier = Number(typography.fontSizeMultiplier)
+  setCssVar(
+    '--font-size-multiplier',
+    Number.isFinite(fontMultiplier) && fontMultiplier > 0 ? fontMultiplier : 1
+  )
+
+  const useCustomFont = Boolean(typography.useCustomFont)
+  const fontFile = String(typography.fontFile || '').trim()
+  if (useCustomFont && fontFile) {
+    ensureThemeFontFace(fontFile)
+    setCssVar('--main-font', "'MLBBThemeFont', Arial, sans-serif")
+  } else {
+    removeThemeFontFace()
+    setCssVar('--main-font', 'Arial, sans-serif')
+  }
+
+  const toggles = themeData.toggles && typeof themeData.toggles === 'object' ? themeData.toggles : {}
+  setCssVar('--toggle-disableGlow', toggles.disableGlow ? '1' : '0')
+  setCssVar('--toggle-hidePattern', toggles.hidePattern ? '1' : '0')
+  setCssVar('--toggle-disableBoxShadow', toggles.disableBoxShadow ? '1' : '0')
+
+  const images = themeData.images && typeof themeData.images === 'object' ? themeData.images : {}
+
+  const heroPickBg = themeAssetUrl(images.heroPickBg, 'images')
+  if (backgroundLayer && heroPickBg) {
+    backgroundLayer.style.backgroundImage = `url("${cacheBust(heroPickBg)}")`
+    backgroundLayer.style.backgroundRepeat = 'no-repeat'
+    backgroundLayer.style.backgroundPosition = 'center'
+    backgroundLayer.style.backgroundSize = '100% 100%'
+  }
+
+  const masterFrame = themeAssetUrl(images.masterFrame, 'images')
+  if (frameImageEl && masterFrame) {
+    frameImageEl.src = cacheBust(masterFrame)
+  }
+
+  const lowerBg = themeAssetUrl(images.lowerBg, 'images')
+  const lowerMidBg = themeAssetUrl(images.lowerMidBg, 'images')
+  if (topLayer && (lowerBg || lowerMidBg)) {
+    const layers = []
+    if (lowerBg) layers.push(`url("${cacheBust(lowerBg)}")`)
+    if (lowerMidBg) layers.push(`url("${cacheBust(lowerMidBg)}")`)
+    topLayer.style.backgroundImage = layers.join(', ')
+    topLayer.style.backgroundRepeat = 'no-repeat'
+    topLayer.style.backgroundPosition = 'center bottom'
+    topLayer.style.backgroundSize = '100% auto'
+  } else if (topLayer) {
+    topLayer.style.backgroundImage = ''
+  }
+
+  try {
+    document.body.style.color = colors.playerName || 'var(--theme-playerName)'
+    document.body.style.fontFamily = 'var(--main-font)'
+  } catch {
+    // ignore
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Layout‑driven styling
 // ─────────────────────────────────────────────────────────────
 

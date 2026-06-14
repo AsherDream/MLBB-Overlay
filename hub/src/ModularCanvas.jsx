@@ -43,12 +43,15 @@ export default function ModularCanvas({
   recalcTrigger,
   matchState,
   editingCropId,
-  setEditingCropId
+  setEditingCropId,
+  onDropFile,
+  canvasScale
 }) {
   const viewportRef = useRef(null)
   const [scale, setScale] = useState(1)
   const [editingMaskId, setEditingMaskId] = useState(null)
   const [maskDragState, setMaskDragState] = useState(null)
+  const [isDragOver, setIsDragOver] = useState(false)
   const sorted = useMemo(() => sortByZ(components || []), [components])
   const onScaleChangeRef = useRef(onScaleChange)
   
@@ -174,6 +177,70 @@ export default function ModularCanvas({
     if (!heroId || heroId === 'none') return null
     return `${SERVER_URL}/Assets/HeroPick/${encodeURIComponent(String(heroId).toLowerCase())}.png`
   }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.target === e.currentTarget) {
+      setIsDragOver(false)
+    }
+  }
+
+  const handleDropFile = async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const file = e.dataTransfer?.files?.[0]
+    if (!file || !file.type.startsWith('image/')) return
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('category', 'logo')
+
+      const res = await fetch(`${SERVER_URL}/api/upload`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+      const data = await res.json()
+
+      if (onDropFile && data.filename) {
+        const rect = viewportRef.current?.getBoundingClientRect()
+        if (!rect) return
+
+        const baseW = 1920
+        const baseH = 1080
+        const s = canvasScale || scale
+        const stageW = baseW * s
+        const stageH = baseH * s
+        const stageLeft = rect.left + (rect.width - stageW) / 2
+        const stageTop = rect.top + (rect.height - stageH) / 2
+
+        const cx = e.clientX - stageLeft
+        const cy = e.clientY - stageTop
+        const x = Math.max(0, Math.min(baseW, Math.round(cx / s)))
+        const y = Math.max(0, Math.min(baseH, Math.round(cy / s)))
+
+        onDropFile({
+          filename: data.filename,
+          url: data.url,
+          x,
+          y
+        })
+      }
+    } catch (err) {
+      console.error('[handleDropFile] Error:', err)
+    }
+  }
     
   return (
     <div
@@ -193,12 +260,21 @@ export default function ModularCanvas({
           // Mathematically center the scaled 1920x1080 box within the flexible container
           left: `calc(50% - ${(BASE_W * scale) / 2}px)`,
           top: `calc(50% - ${(BASE_H * scale) / 2}px)`,
-          backgroundColor: '#000'
+          backgroundColor: '#000',
+          border: isDragOver ? '3px dashed rgba(167, 139, 250, 0.8)' : 'none',
+          transition: 'border 0.2s ease-out'
         }}
-        onMouseDown={() => {
-          onSelect?.(null)
-          setEditingCropId?.(null)
+        onMouseDown={(e) => {
+          // Only close modes if clicking directly on empty backdrop, not on components
+          if (e.target === e.currentTarget) {
+            onSelect?.(null)
+            setEditingCropId?.(null)
+            setEditingMaskId(null)
+          }
         }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDropFile}
       >
         {/* Background Layer */}
         {backgroundUrl && (

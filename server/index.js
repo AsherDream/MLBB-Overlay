@@ -540,6 +540,46 @@ app.get('/api/maps', (req, res) => {
   return res.json({ maps: listFiles(MAPS_DIR) });
 });
 
+app.get('/api/assets', (req, res) => {
+  try {
+    const allAssets = [];
+    const dirs = [
+      { path: BACKGROUNDS_DIR, prefix: 'backgrounds/' },
+      { path: FRAMES_DIR, prefix: 'frames/' },
+      { path: LOGOS_DIR, prefix: 'logos/' },
+      { path: MAPS_DIR, prefix: 'Maps/' },
+      { path: HERO_PICK_DIR, prefix: 'HeroPick/' },
+      { path: VOICE_LINES_DIR, prefix: 'VoiceLines/' }
+    ];
+
+    for (const dir of dirs) {
+      try {
+        if (fs.existsSync(dir.path)) {
+          const files = fs
+            .readdirSync(dir.path, { withFileTypes: true })
+            .filter((d) => d.isFile())
+            .map((d) => d.name)
+            .filter((name) => !name.startsWith('.'));
+          
+          files.forEach((filename) => {
+            allAssets.push({
+              filename,
+              path: dir.prefix + filename,
+              category: dir.prefix.replace(/\/$/, '')
+            });
+          });
+        }
+      } catch {
+        // ignore individual directory errors
+      }
+    }
+
+    return res.json({ status: 'success', assets: allAssets });
+  } catch (err) {
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 app.put('/api/active-layout', (req, res) => {
   try {
     const id = String(req.body?.id || '').trim();

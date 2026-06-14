@@ -1,10 +1,17 @@
 import { getLayoutId, shouldFollowLiveLayout, startHeroPrefetchLoop } from './js/utils.js'
 import { initAudioUnlocker, updateAudioConfig } from './js/audioEngine.js'
-import { applyOverlayScale, applyLayoutStyles, renderOverlay, setLayoutLoadError } from './js/renderer.js'
+import {
+  applyOverlayScale,
+  applyLayoutStyles,
+  applyThemeStyles,
+  renderOverlay,
+  setLayoutLoadError,
+} from './js/renderer.js'
 
 let currentLayoutId = null
 let currentLayout = null
 let currentState = null
+let currentTheme = null
 
 // ─────────────────────────────────────────────────────────────
 // Scheduled rendering (max once per frame)
@@ -23,6 +30,43 @@ function scheduleRender(state) {
     renderOverlay(pendingState, currentLayout)
     rendering = false
   })
+}
+
+// ─────────────────────────────────────────────────────────────
+// Theme loading (REST + socket payload)
+// ─────────────────────────────────────────────────────────────
+
+async function fetchThemeFromServer() {
+  try {
+    const res = await fetch('/api/theme')
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.theme && typeof data.theme === 'object' ? data.theme : null
+  } catch {
+    return null
+  }
+}
+
+function applyThemeFromPayload(theme) {
+  if (!theme || typeof theme !== 'object') return
+  currentTheme = theme
+}
+
+function reapplyVisualLayers() {
+  if (currentLayout) {
+    applyLayoutStyles(currentLayout)
+  }
+  if (currentTheme) {
+    applyThemeStyles(currentTheme)
+  }
+}
+
+async function bootstrapTheme() {
+  const theme = await fetchThemeFromServer()
+  if (theme) {
+    currentTheme = theme
+  }
+  return theme
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -57,7 +101,6 @@ async function bootstrap() {
     const data = await res.json()
     currentLayout = data.layout
 
-    // 5. Apply layout styles
     applyLayoutStyles(currentLayout)
   } catch (e) {
     // eslint-disable-next-line no-console
@@ -65,6 +108,9 @@ async function bootstrap() {
     setLayoutLoadError()
     return
   }
+
+  await bootstrapTheme()
+  reapplyVisualLayers()
 
   // 6. Initial render (if state exists)
   try {
@@ -95,7 +141,7 @@ async function bootstrap() {
       currentLayoutId = nextId
       currentLayout = data.layout
 
-      applyLayoutStyles(currentLayout)
+      reapplyVisualLayers()
       if (currentState) renderOverlay(currentState, currentLayout)
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -111,6 +157,18 @@ async function bootstrap() {
   socket.on('STATE_SYNC', scheduleRender)
   socket.on('AUDIO_SYNC', (cfg) => {
     updateAudioConfig(cfg)
+  })
+
+  socket.on('theme_update', async (themePayload) => {
+    if (themePayload && typeof themePayload === 'object') {
+      applyThemeFromPayload(themePayload)
+    } else {
+      const theme = await fetchThemeFromServer()
+      if (theme) {
+        applyThemeFromPayload(theme)
+      }
+    }
+    reapplyVisualLayers()
   })
 
   socket.on('LAYOUT_UPDATE', (layoutIdPayload) => {

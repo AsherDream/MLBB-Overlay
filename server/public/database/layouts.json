@@ -7,9 +7,9 @@
       {
         "instanceId": "T1_NAME_1773376064550_1e1373e88f8e38",
         "atom": "T1_NAME",
-        "x": 278,
-        "y": 0,
-        "width": 181,
+        "x": 231,
+        "y": 10,
+        "width": 288,
         "height": 72,
         "visible": true,
         "locked": false,
@@ -55,8 +55,8 @@
       {
         "instanceId": "T1_PICK_1773376085549_827348b2bed7",
         "atom": "T1_PICK",
-        "x": 620,
-        "y": 93,
+        "x": 586,
+        "y": 91,
         "width": 278,
         "height": 367,
         "visible": true,
@@ -66,14 +66,14 @@
           "idx": 0
         },
         "crop": {
-          "x": 55,
-          "y": 15,
+          "x": -58,
+          "y": 169,
           "scale": 1.95
         },
         "transform": {
           "scale": 1.95,
-          "panX": 55.35868703246108,
-          "panY": 15.27252326623595,
+          "panX": -58.3853887969228,
+          "panY": 168.5797559058403,
           "rotation": 0
         },
         "frameRotation": 3
@@ -415,7 +415,7 @@
       {
         "instanceId": "T1_BAN_1773938040323_b443ed2f7ea7a",
         "atom": "T1_BAN",
-        "x": 0,
+        "x": 10,
         "y": 512,
         "width": 158,
         "height": 72,
@@ -467,8 +467,8 @@
       {
         "instanceId": "T2_BAN_1780301377217_efbec7efeaec18",
         "atom": "T2_BAN",
-        "x": 1111,
-        "y": 111,
+        "x": 1198,
+        "y": 78,
         "width": 320,
         "height": 434,
         "visible": true,
@@ -486,6 +486,32 @@
           "scale": 1,
           "panX": -12.898392313519835,
           "panY": 12.898392313519842,
+          "rotation": 0
+        },
+        "frameRotation": 0
+      },
+      {
+        "instanceId": "T1_PLAYER_NAME_1781272573844_61a1b569b2672",
+        "atom": "T1_PLAYER_NAME",
+        "x": 0,
+        "y": 177,
+        "width": 347,
+        "height": 114,
+        "visible": true,
+        "locked": false,
+        "zIndex": 19,
+        "bind": {
+          "idx": 1
+        },
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        },
+        "transform": {
+          "scale": 1,
+          "panX": 0,
+          "panY": 0,
           "rotation": 0
         },
         "frameRotation": 0

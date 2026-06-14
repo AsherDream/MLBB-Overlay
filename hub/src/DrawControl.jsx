@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useLayout } from './App.jsx'
-import { Save, Upload } from 'lucide-react'
+import { Save, Upload, ChevronRight, RefreshCw, Image } from 'lucide-react'
 import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
 import ModularCanvas from './ModularCanvas.jsx'
 import LayerProperties from './LayerProperties.jsx'
@@ -154,6 +154,9 @@ export default function DrawControl() {
   const [frames, setFrames] = useState([])
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState(null)
+  const [assetLibrary, setAssetLibrary] = useState([])
+  const [assetLibraryOpen, setAssetLibraryOpen] = useState(false)
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false)
   const toastTimeoutRef = useRef(null)
   const saveTimeoutRef = useRef(null)
 
@@ -286,6 +289,30 @@ export default function DrawControl() {
       mounted = false
     }
   }, [])
+
+  const loadAssetLibrary = useCallback(async () => {
+    setIsLoadingAssets(true)
+    try {
+      const res = await fetch(`${SERVER_URL}/api/assets`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.status === 'success' && Array.isArray(data.assets)) {
+          setAssetLibrary(data.assets)
+          return data.assets.length
+        }
+      }
+    } catch (err) {
+      console.error('[loadAssetLibrary] Error:', err)
+    } finally {
+      setIsLoadingAssets(false)
+    }
+    return null
+  }, [])
+
+  useEffect(() => {
+    if (!assetLibraryOpen) return
+    loadAssetLibrary()
+  }, [layoutId, assetLibraryOpen, loadAssetLibrary])
 
   useEffect(() => {
     return () => {
@@ -604,6 +631,135 @@ export default function DrawControl() {
     }
   }
 
+  function handleAssetDrop(droppedFile) {
+    try {
+      if (!droppedFile || !droppedFile.filename) return
+
+      const instanceId = newInstanceId('CUSTOM_IMAGE')
+      const size = { width: 200, height: 200 }
+      const x = clampInt(droppedFile.x || 0, 0, 1920)
+      const y = clampInt(droppedFile.y || 0, 0, 1080)
+
+      const next = normalizeNewComponent(
+        {
+          instanceId,
+          atom: 'CUSTOM_IMAGE',
+          x,
+          y,
+          width: size.width,
+          height: size.height,
+          alias: droppedFile.filename.split('.')[0] || 'Asset',
+          visible: true,
+          locked: false,
+          zIndex: (components || []).length,
+          src: droppedFile.url || `/Assets/${droppedFile.filename}`
+        },
+        (components || []).length
+      )
+
+      setComponents((prev) => [...prev, next])
+      setSelectedId(instanceId)
+      showToast(`Asset "${next.alias}" added to canvas`)
+    } catch (err) {
+      console.error('[handleAssetDrop] Error:', err)
+      showToast('Failed to add asset')
+    }
+  }
+
+  function spawnAssetOnCanvas(asset) {
+    try {
+      const instanceId = newInstanceId('CUSTOM_IMAGE')
+      const size = { width: 200, height: 200 }
+      const centerX = clampInt(960 - size.width / 2, 0, 1920)
+      const centerY = clampInt(540 - size.height / 2, 0, 1080)
+
+      const assetName = asset.filename.split('.')[0] || 'Asset'
+      const next = normalizeNewComponent(
+        {
+          instanceId,
+          atom: 'CUSTOM_IMAGE',
+          x: centerX,
+          y: centerY,
+          width: size.width,
+          height: size.height,
+          alias: assetName,
+          visible: true,
+          locked: false,
+          zIndex: (components || []).length,
+          src: `${SERVER_URL}/Assets/${asset.path}`
+        },
+        (components || []).length
+      )
+
+      setComponents((prev) => [...prev, next])
+      setSelectedId(instanceId)
+      showToast(`Asset "${assetName}" spawned on canvas`)
+    } catch (err) {
+      console.error('[spawnAssetOnCanvas] Error:', err)
+    }
+  }
+
+  async function refreshAssetLibrary() {
+    try {
+      const count = await loadAssetLibrary()
+      if (count != null) {
+        showToast(`Asset library refreshed (${count} items)`)
+      }
+    } catch (err) {
+      console.error('[refreshAssetLibrary] Error:', err)
+      showToast('Failed to refresh asset library')
+    }
+  }
+
+  function renderAssetLibraryThumbnails() {
+    if (!assetLibraryOpen) return null
+
+    if (isLoadingAssets) {
+      return (
+        <div className="flex items-center justify-center py-6 text-white/50 text-xs">
+          Loading assets…
+        </div>
+      )
+    }
+
+    if (assetLibrary.length === 0) {
+      return (
+        <div className="flex items-center justify-center py-6 text-white/50 text-xs text-center">
+          No assets found
+        </div>
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {assetLibrary.map((asset) => (
+          <button
+            key={`${asset.category}-${asset.filename}`}
+            type="button"
+            onClick={() => spawnAssetOnCanvas(asset)}
+            title={asset.filename}
+            className="group relative rounded-lg overflow-hidden bg-white/5 border border-white/10 hover:border-white/30 transition aspect-square"
+          >
+            <img
+              src={`${SERVER_URL}/Assets/${asset.path}`}
+              alt={asset.filename}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:opacity-75 transition"
+              onError={(e) => {
+                e.target.style.display = 'none'
+              }}
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white text-center px-1">
+                Click to spawn
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0f0c15] p-6">
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center md:justify-between">
@@ -723,6 +879,8 @@ export default function DrawControl() {
             matchState={matchState}
             editingCropId={editingCropId}
             setEditingCropId={setEditingCropId}
+            onDropFile={handleAssetDrop}
+            canvasScale={scale}
           />
         </div>
 
@@ -745,11 +903,51 @@ export default function DrawControl() {
             onClose={() => setEditingCropId(null)}
           />
         ) : (
-          <LayerProperties
-            selected={selected}
-            onChange={(next) => updateComponent(next)}
-            onDelete={(t) => deleteComponent(t)}
-          />
+          <div className="flex flex-col min-w-0 gap-3 overflow-hidden" style={{ width: '300px' }}>
+            <LayerProperties
+              selected={selected}
+              onChange={(next) => updateComponent(next)}
+              onDelete={(t) => deleteComponent(t)}
+            />
+
+            {/* Asset Library Drawer */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col min-h-0">
+              <button
+                type="button"
+                onClick={() => setAssetLibraryOpen(!assetLibraryOpen)}
+                className="flex items-center justify-between w-full px-4 py-3 hover:bg-white/10 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Image className="size-4 text-white/70" />
+                  <span className="text-xs font-bold tracking-[0.22em] text-white/50">ASSET LIBRARY</span>
+                </div>
+                <ChevronRight
+                  className="size-4 transition-transform"
+                  style={{ transform: assetLibraryOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                />
+              </button>
+
+              {assetLibraryOpen ? (
+                <div className="flex flex-col min-h-0 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={refreshAssetLibrary}
+                      disabled={isLoadingAssets}
+                      className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-[10px] font-bold text-white hover:bg-white/15 disabled:opacity-50 transition"
+                    >
+                      <RefreshCw className="size-3" />
+                      REFRESH
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto px-3 py-3">
+                    {renderAssetLibraryThumbnails()}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
         )}
       </div>
     </div>
