@@ -406,7 +406,7 @@ export default function ModularCanvas({
               dragGrid={[1, 1]}
               resizeGrid={[1, 1]}
               disableDragging={!!c.locked || isEditing || isEditingMask}
-              enableResizing={!c.locked && !isEditing && !isEditingMask}
+              enableResizing={!c.locked && !isEditing}
               onMouseDown={(e) => {
                 e.stopPropagation()
                 onSelect?.(id)
@@ -473,27 +473,140 @@ export default function ModularCanvas({
                     {textValue || c.alias || c.atom}
                   </div>
                 ) : imageSrc ? (
-                  <img
-                    src={imageSrc}
-                    alt="component"
-                    style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transformOrigin: 'center center',
-                      transform: `translate(-50%, -50%) translate(${normalizedTransform.panX || 0}px, ${normalizedTransform.panY || 0}px) scale(${normalizedTransform.scale || 1}) rotate(${normalizedTransform.rotation || 0}deg)`,
-                      opacity: isEditingMask ? 0.45 : 1,
-                      filter: isEditingMask ? 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' : 'none',
-                      pointerEvents: 'none',
-                      width: 'auto',
-                      height: 'auto',
-                      objectFit: 'cover',
-                      minWidth: '100%',
-                      minHeight: '100%',
-                      cursor: isEditingMask ? 'grab' : 'default'
-                    }}
-                    draggable={false}
-                  />
+                  isEditingMask ? (
+                    <Rnd
+                      size={{
+                        width: c.width * (normalizedTransform.scale || 1),
+                        height: c.height * (normalizedTransform.scale || 1)
+                      }}
+                      position={{
+                        x: (c.width - c.width * (normalizedTransform.scale || 1)) / 2 + (normalizedTransform.panX || 0),
+                        y: (c.height - c.height * (normalizedTransform.scale || 1)) / 2 + (normalizedTransform.panY || 0)
+                      }}
+                      scale={scale}
+                      dragGrid={[1, 1]}
+                      resizeGrid={[1, 1]}
+                      disableDragging={false}
+                      enableResizing={true}
+                      style={{
+                        border: '2px dashed rgba(59, 130, 246, 0.8)',
+                        boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+                        zIndex: 20,
+                        overflow: 'visible'
+                      }}
+                      onDrag={(e, d) => {
+                        const innerW = c.width * (normalizedTransform.scale || 1)
+                        const innerH = c.height * (normalizedTransform.scale || 1)
+                        const nextPanX = Math.round(d.x - (c.width - innerW) / 2)
+                        const nextPanY = Math.round(d.y - (c.height - innerH) / 2)
+                        onUpdate?.({
+                          ...c,
+                          transform: {
+                            ...normalizedTransform,
+                            panX: nextPanX,
+                            panY: nextPanY
+                          }
+                        })
+                      }}
+                      onDragStop={(e, d) => {
+                        const innerW = c.width * (normalizedTransform.scale || 1)
+                        const innerH = c.height * (normalizedTransform.scale || 1)
+                        const nextPanX = Math.round(d.x - (c.width - innerW) / 2)
+                        const nextPanY = Math.round(d.y - (c.height - innerH) / 2)
+                        onUpdate?.({
+                          ...c,
+                          transform: {
+                            ...normalizedTransform,
+                            panX: nextPanX,
+                            panY: nextPanY
+                          }
+                        })
+                      }}
+                      onResize={(e, dir, ref, delta, pos) => {
+                        const nextScale = Math.max(0.1, Math.min(10, ref.offsetWidth / c.width))
+                        const nextInnerW = ref.offsetWidth
+                        const nextInnerH = ref.offsetHeight
+                        const nextPanX = Math.round(pos.x - (c.width - nextInnerW) / 2)
+                        const nextPanY = Math.round(pos.y - (c.height - nextInnerH) / 2)
+                        onUpdate?.({
+                          ...c,
+                          transform: {
+                            ...normalizedTransform,
+                            scale: nextScale,
+                            panX: nextPanX,
+                            panY: nextPanY
+                          }
+                        })
+                      }}
+                      onResizeStop={(e, dir, ref, delta, pos) => {
+                        const nextScale = Math.max(0.1, Math.min(10, ref.offsetWidth / c.width))
+                        const nextInnerW = ref.offsetWidth
+                        const nextInnerH = ref.offsetHeight
+                        const nextPanX = Math.round(pos.x - (c.width - nextInnerW) / 2)
+                        const nextPanY = Math.round(pos.y - (c.height - nextInnerH) / 2)
+                        onUpdate?.({
+                          ...c,
+                          transform: {
+                            ...normalizedTransform,
+                            scale: nextScale,
+                            panX: nextPanX,
+                            panY: nextPanY
+                          }
+                        })
+                      }}
+                    >
+                      <img
+                        src={imageSrc}
+                        alt="component"
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: `translate(-50%, -50%) rotate(${normalizedTransform.rotation || 0}deg)`,
+                          transformOrigin: 'center center',
+                          width: 'auto',
+                          height: 'auto',
+                          minWidth: '100%',
+                          minHeight: '100%',
+                          objectFit: 'cover',
+                          opacity: 0.55,
+                          pointerEvents: 'none',
+                          overflow: 'visible'
+                        }}
+                        draggable={false}
+                      />
+                      <RotationHandle
+                        theme="blue"
+                        currentRotation={normalizedTransform.rotation}
+                        onRotate={(deg) => {
+                          onUpdate?.({
+                            ...c,
+                            transform: { ...normalizedTransform, rotation: deg }
+                          })
+                        }}
+                      />
+                    </Rnd>
+                  ) : (
+                    <img
+                      src={imageSrc}
+                      alt="component"
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transformOrigin: 'center center',
+                        transform: `translate(-50%, -50%) translate(${normalizedTransform.panX || 0}px, ${normalizedTransform.panY || 0}px) scale(${normalizedTransform.scale || 1}) rotate(${normalizedTransform.rotation || 0}deg)`,
+                        opacity: 1,
+                        pointerEvents: 'none',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'cover',
+                        minWidth: '100%',
+                        minHeight: '100%'
+                      }}
+                      draggable={false}
+                    />
+                  )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">
                     No image
@@ -515,7 +628,7 @@ export default function ModularCanvas({
               </div>
 
               {/* Outer Frame Rotation Handle */}
-              {isSelected && !isEditing && !isEditingMask && (
+              {isSelected && !isEditing && (
                 <RotationHandle
                   theme="purple"
                   currentRotation={c.frameRotation}

@@ -7,10 +7,10 @@
       {
         "instanceId": "T1_PICK_1773376085549_827348b2bed7",
         "atom": "T1_PICK",
-        "x": 727,
-        "y": 72,
-        "width": 356,
-        "height": 416,
+        "x": 1322,
+        "y": 0,
+        "width": 426,
+        "height": 386,
         "visible": true,
         "locked": false,
         "zIndex": 2,
@@ -36,14 +36,14 @@
           }
         ],
         "crop": {
-          "x": 38,
-          "y": -353,
-          "scale": 1.95
+          "x": -20,
+          "y": -7,
+          "scale": 1.8595505617977528
         },
         "transform": {
-          "scale": 1.95,
-          "panX": 38.04980592798968,
-          "panY": -353.1593745289423,
+          "scale": 1.8595505617977528,
+          "panX": -20,
+          "panY": -7,
           "rotation": 0
         },
         "frameRotation": 0,
@@ -387,9 +387,9 @@
       {
         "instanceId": "T1_BAN_1773938040323_b443ed2f7ea7a",
         "atom": "T1_BAN",
-        "x": 84,
-        "y": 126,
-        "width": 247,
+        "x": 575,
+        "y": 89,
+        "width": 341,
         "height": 285,
         "visible": true,
         "locked": false,
@@ -398,17 +398,17 @@
           "idx": 0
         },
         "crop": {
-          "x": 0,
-          "y": 5,
-          "scale": 1
+          "x": 36,
+          "y": 43,
+          "scale": 1.278592375366569
         },
         "transform": {
-          "scale": 1,
-          "panX": 0,
-          "panY": 4.945394601277565,
-          "rotation": 0
+          "scale": 1.278592375366569,
+          "panX": 36,
+          "panY": 43,
+          "rotation": -2
         },
-        "frameRotation": 0,
+        "frameRotation": 1,
         "alias": "",
         "src": ""
       }
