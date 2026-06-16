@@ -5,11 +5,9 @@ import { Save, Upload, ChevronRight, RefreshCw, Image } from 'lucide-react'
 import ComponentLibrarySidebar from './ComponentLibrarySidebar.jsx'
 import ModularCanvas from './ModularCanvas.jsx'
 import LayerProperties from './LayerProperties.jsx'
-import CropControlsSidebar from './components/CropControlsSidebar.jsx'
 import { defaultSizeForAtom, spawnSizeForAtom, newInstanceId } from './atoms.js'
 
 const SERVER_URL = import.meta?.env?.VITE_SERVER_URL || 'http://localhost:3000'
-
 
 function toServerUrl(url) {
   const s = String(url || '')
@@ -139,7 +137,6 @@ function normalizeNewComponent(c, fallbackZ) {
 }
 
 export default function DrawControl() {
-
   const [matchState, setMatchState] = useState(null);
 
   useEffect(() => {
@@ -152,10 +149,10 @@ export default function DrawControl() {
       }
     }
     fetchMatch();
-    // Optional: Set an interval to refresh every 5 seconds if you want the Hub to update live
     const int = setInterval(fetchMatch, 5000);
     return () => clearInterval(int);
   }, []);
+
   const params = useParams()
   const { sidebarCollapsed } = useLayout()
   const layoutId = params?.id || 'testing'
@@ -222,7 +219,6 @@ export default function DrawControl() {
         const migrated = comps.map((c, idx) => {
           if (c && typeof c === 'object' && c.instanceId && c.atom) return normalizeNewComponent(c, idx)
 
-          // Legacy -> atom inference based on id
           const id = String(c?.id || '')
           const s = id.toLowerCase()
           let atom = 'T1_NAME'
@@ -385,7 +381,6 @@ export default function DrawControl() {
         bind: c.bind && typeof c.bind === 'object' ? c.bind : {},
         transform: normalizeTransform(c.transform),
         frameRotation: Number.isFinite(c.frameRotation) ? c.frameRotation : 0,
-        // BACKWARD COMPATIBILITY FOR OVERLAY
         crop: {
           x: Number.isFinite(c.transform?.panX) ? Math.round(c.transform.panX) : 0,
           y: Number.isFinite(c.transform?.panY) ? Math.round(c.transform.panY) : 0,
@@ -478,8 +473,6 @@ export default function DrawControl() {
     if (!res.ok) throw new Error(await res.text())
   }
 
-  // Scale is computed inside ModularCanvas; this state is for drop coordination only
-
   const selected = useMemo(() => (components || []).find((c) => c.instanceId === selectedId) || null, [components, selectedId])
 
   function computeSpawnBindingAndCheckLimit(baseAtom) {
@@ -571,7 +564,6 @@ export default function DrawControl() {
           : c
       )
 
-      // 🚨 IMPORTANT: async outside React render cycle
       setTimeout(() => triggerAutoSave(updated), 0)
 
       return updated
@@ -631,7 +623,6 @@ export default function DrawControl() {
       const { ok, bind } = computeSpawnBindingAndCheckLimit(base)
       if (!ok) return
 
-      // Convert client drop position to layout coordinates
       const host = wrapRef.current
       if (!host) return
       const rect = host.getBoundingClientRect()
@@ -892,13 +883,13 @@ export default function DrawControl() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 w-full items-stretch gap-3 overflow-hidden">
+      <div className={`flex min-h-0 flex-1 w-full items-stretch gap-3 ${editingCropId ? 'overflow-visible' : 'overflow-hidden'}`} style={{ overflow: editingCropId ? 'visible' : 'hidden' }}>
         <ComponentLibrarySidebar onSpawn={spawnAtom} />
 
         <div
           ref={wrapRef}
-          className="relative z-0 flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden"
-          style={{ aspectRatio: '16/9', maxHeight: '80vh' }}
+          className={`relative z-0 flex min-w-0 flex-1 flex-col items-center justify-center ${editingCropId ? 'overflow-visible' : 'overflow-hidden'}`}
+          style={{ aspectRatio: '16/9', maxHeight: '80vh', overflow: editingCropId ? 'visible' : 'hidden' }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault()
@@ -926,72 +917,52 @@ export default function DrawControl() {
           />
         </div>
 
-        {editingCropId === selectedId && selected ? (
-          <CropControlsSidebar
-            transform={selected.transform}
-            onChange={(newTransform) => {
-              updateComponent({
-                ...selected,
-                transform: {
-                  scale: 1,
-                  panX: 0,
-                  panY: 0,
-                  rotation: 0,
-                  ...(selected.transform || {}),
-                  ...(newTransform || {})
-                }
-              })
-            }}
-            onClose={() => setEditingCropId(null)}
+        <div className="flex flex-col min-w-0 gap-3 overflow-hidden" style={{ width: '300px' }}>
+          <LayerProperties
+            selected={selected}
+            theme={editorTheme}
+            onChange={(next) => updateComponent(next)}
+            onDelete={(t) => deleteComponent(t)}
           />
-        ) : (
-          <div className="flex flex-col min-w-0 gap-3 overflow-hidden" style={{ width: '300px' }}>
-            <LayerProperties
-              selected={selected}
-              theme={editorTheme}
-              onChange={(next) => updateComponent(next)}
-              onDelete={(t) => deleteComponent(t)}
-            />
 
-            {/* Asset Library Drawer */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col min-h-0">
-              <button
-                type="button"
-                onClick={() => setAssetLibraryOpen(!assetLibraryOpen)}
-                className="flex items-center justify-between w-full px-4 py-3 hover:bg-white/10 transition"
-              >
-                <div className="flex items-center gap-2">
-                  <Image className="size-4 text-white/70" />
-                  <span className="text-xs font-bold tracking-[0.22em] text-white/50">ASSET LIBRARY</span>
+          {/* Asset Library Drawer */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden flex flex-col min-h-0">
+            <button
+              type="button"
+              onClick={() => setAssetLibraryOpen(!assetLibraryOpen)}
+              className="flex items-center justify-between w-full px-4 py-3 hover:bg-white/10 transition"
+            >
+              <div className="flex items-center gap-2">
+                <Image className="size-4 text-white/70" />
+                <span className="text-xs font-bold tracking-[0.22em] text-white/50">ASSET LIBRARY</span>
+              </div>
+              <ChevronRight
+                className="size-4 transition-transform"
+                style={{ transform: assetLibraryOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+              />
+            </button>
+
+            {assetLibraryOpen ? (
+              <div className="flex flex-col min-h-0 overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={refreshAssetLibrary}
+                    disabled={isLoadingAssets}
+                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-[10px] font-bold text-white hover:bg-white/15 disabled:opacity-50 transition"
+                  >
+                    <RefreshCw className="size-3" />
+                    REFRESH
+                  </button>
                 </div>
-                <ChevronRight
-                  className="size-4 transition-transform"
-                  style={{ transform: assetLibraryOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
-                />
-              </button>
 
-              {assetLibraryOpen ? (
-                <div className="flex flex-col min-h-0 overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2 border-t border-white/10">
-                    <button
-                      type="button"
-                      onClick={refreshAssetLibrary}
-                      disabled={isLoadingAssets}
-                      className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-[10px] font-bold text-white hover:bg-white/15 disabled:opacity-50 transition"
-                    >
-                      <RefreshCw className="size-3" />
-                      REFRESH
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto px-3 py-3">
-                    {renderAssetLibraryThumbnails()}
-                  </div>
+                <div className="flex-1 overflow-y-auto px-3 py-3">
+                  {renderAssetLibraryThumbnails()}
                 </div>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

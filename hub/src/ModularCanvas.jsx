@@ -61,6 +61,14 @@ export default function ModularCanvas({
     onScaleChangeRef.current = onScaleChange
   }, [onScaleChange])
 
+  // Sync selectedId with editingMaskId and editingCropId
+  useEffect(() => {
+    if (selectedId !== editingMaskId) {
+      setEditingMaskId(null)
+      setEditingCropId?.(null)
+    }
+  }, [selectedId, editingMaskId, setEditingCropId])
+
   const recalc = useCallback(() => {
     const el = viewportRef.current
     if (!el) return
@@ -298,11 +306,30 @@ export default function ModularCanvas({
       console.error('[handleDropFile] Error:', err)
     }
   }
-    
+
+  const dismissFocusMode = (e) => {
+    if (editingMaskId) {
+      const editingShell = document.querySelector(`[data-focus-component="${editingMaskId}"]`)
+      if (editingShell?.contains(e.target)) return
+      setEditingMaskId(null)
+      setEditingCropId?.(null)
+    }
+    if (editingCropId && !e.target.closest('.react-draggable')) {
+      setEditingCropId?.(null)
+    }
+  }
+
   return (
     <div
-      className="flex-1 w-full h-full relative overflow-hidden bg-black/20 rounded-2xl border border-white/10"
+      className="flex-1 w-full h-full relative bg-black/20 rounded-2xl border border-white/10"
       ref={viewportRef}
+      style={{ overflow: editingMaskId ? 'visible' : 'hidden' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setEditingMaskId(null)
+          setEditingCropId?.(null)
+        }
+      }}
     >
       {/* By using absolute positioning and CSS calc(), the inner canvas size 
         never dictates the outer container size. The feedback loop is broken! 
@@ -319,7 +346,8 @@ export default function ModularCanvas({
           top: `calc(50% - ${(BASE_H * scale) / 2}px)`,
           backgroundColor: '#000',
           border: isDragOver ? '3px dashed rgba(167, 139, 250, 0.8)' : 'none',
-          transition: 'border 0.2s ease-out'
+          transition: 'border 0.2s ease-out',
+          overflow: editingMaskId ? 'visible' : 'hidden'
         }}
         onMouseDown={(e) => {
           // Only close modes if clicking directly on empty backdrop, not on components
@@ -329,6 +357,7 @@ export default function ModularCanvas({
             setEditingMaskId(null)
           }
         }}
+        onClick={dismissFocusMode}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDropFile}
@@ -400,11 +429,15 @@ export default function ModularCanvas({
                   height: Math.round(ref.offsetHeight)
                 })
               }}
-              style={{ zIndex: z, opacity: c.visible === false ? 0 : 1 }}
+              style={{
+                zIndex: z,
+                opacity: c.visible === false ? 0 : 1,
+                ...(isEditingMask ? { overflow: 'visible' } : {}),
+              }}
             >
               <div
                 className={`h-full w-full rounded-lg bg-[#1a1625]/70 ${
-                  isEditingMask ? 'border-2 border-dashed' : 'border'
+                  isEditingMask ? 'border-2 border-dashed !overflow-visible' : 'border overflow-hidden'
                 } ${
                   isSelected ? (isEditingMask ? 'border-emerald-400/80' : 'border-[#a78bfa] shadow-[0_0_15px_rgba(167,139,250,0.5)]') : 'border-white/10'
                 }`}
@@ -412,12 +445,15 @@ export default function ModularCanvas({
                   overflow: isEditingMask ? 'visible' : 'hidden',
                   transform: `rotate(${safeFrameRot}deg)`,
                   transformOrigin: 'center center',
-                  transition: isEditingMask ? 'none' : 'transform 0.1s ease-out'
+                  transition: isEditingMask ? 'none' : 'transform 0.1s ease-out',
                 }}
+                data-focus-component={isEditingMask ? id : undefined}
                 onDoubleClick={(e) => {
                   e.stopPropagation()
                   if (IMAGE_ATOMS.includes(c.atom)) {
-                    setEditingMaskId(isEditingMask ? null : id)
+                    const nextMaskId = isEditingMask ? null : id
+                    setEditingMaskId(nextMaskId)
+                    setEditingCropId?.(nextMaskId)
                     onSelect?.(id)
                   }
                 }}
@@ -449,11 +485,11 @@ export default function ModularCanvas({
                       opacity: isEditingMask ? 0.45 : 1,
                       filter: isEditingMask ? 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' : 'none',
                       pointerEvents: 'none',
-                      width: isEditingMask ? 'auto' : '100%',
-                      height: isEditingMask ? 'auto' : '100%',
-                      objectFit: isEditingMask ? 'contain' : 'cover',
-                      minWidth: isEditingMask ? '100%' : 'auto',
-                      minHeight: isEditingMask ? '100%' : 'auto',
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'cover',
+                      minWidth: '100%',
+                      minHeight: '100%',
                       cursor: isEditingMask ? 'grab' : 'default'
                     }}
                     draggable={false}

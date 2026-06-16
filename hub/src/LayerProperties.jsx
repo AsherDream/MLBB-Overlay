@@ -1,6 +1,12 @@
 import SmartInput from './SmartInput.jsx'
 import { getThemeFontFamily, getThemeFontSize } from './atoms.js'
 
+const IMAGE_ATOMS = ['T1_PICK', 'T2_PICK', 'T1_BAN', 'T2_BAN', 'T1_LOGO', 'T2_LOGO', 'MAP', 'CUSTOM_IMAGE']
+
+function isImageStyleAtom(atom) {
+  return IMAGE_ATOMS.includes(String(atom || ''))
+}
+
 function clampInt(n, min, max) {
   const x = Number.isFinite(n) ? n : parseInt(String(n || '0'), 10)
   if (Number.isNaN(x)) return min
@@ -8,14 +14,13 @@ function clampInt(n, min, max) {
 }
 
 function parseSafeInt(inputValue, min, max) {
-  const cleanVal = parseInt(inputValue, 10)
-  const finalVal = Number.isNaN(cleanVal) ? 0 : cleanVal
-  return clampInt(finalVal, min, max)
+  const finalVal = isNaN(parseInt(inputValue, 10)) ? 0 : parseInt(inputValue, 10)
+  return Math.max(min, Math.min(max, finalVal))
 }
 
-function parseSafeFloat(inputValue, min, max, fallback) {
+function parseSafeFloat(inputValue, min, max, fallback = 1) {
   const cleanVal = parseFloat(inputValue)
-  const finalVal = Number.isNaN(cleanVal) ? fallback : cleanVal
+  const finalVal = isNaN(cleanVal) ? fallback : cleanVal
   return Math.max(min, Math.min(max, finalVal))
 }
 
@@ -33,6 +38,16 @@ function normalizeStyle(style) {
   return { ...style }
 }
 
+function resolveTransformFields(transform) {
+  const t = transform && typeof transform === 'object' ? transform : {}
+  return {
+    panX: Number.isFinite(Number(t.panX)) ? Number(t.panX) : 0,
+    panY: Number.isFinite(Number(t.panY)) ? Number(t.panY) : 0,
+    scale: Number.isFinite(Number(t.scale)) && Number(t.scale) > 0 ? Number(t.scale) : 1,
+    rotation: Number.isFinite(Number(t.rotation)) ? Number(t.rotation) : 0,
+  }
+}
+
 export default function LayerProperties({ selected, onChange, onDelete, theme }) {
   if (!selected) {
     return (
@@ -45,14 +60,7 @@ export default function LayerProperties({ selected, onChange, onDelete, theme })
 
   const bind = selected.bind && typeof selected.bind === 'object' ? selected.bind : {}
   const idx = clampInt(bind.idx ?? 0, 0, 4)
-  const crop =
-    selected.crop && typeof selected.crop === 'object'
-      ? {
-          x: Number.isFinite(selected.crop.x) ? selected.crop.x : 0,
-          y: Number.isFinite(selected.crop.y) ? selected.crop.y : 0,
-          scale: Number.isFinite(selected.crop.scale) && selected.crop.scale > 0 ? selected.crop.scale : 1
-        }
-      : { x: 0, y: 0, scale: 1 }
+  const focusTransform = resolveTransformFields(selected.transform)
 
   const baseMask =
     Array.isArray(selected.maskPoints) && selected.maskPoints.length >= 4
@@ -83,6 +91,19 @@ export default function LayerProperties({ selected, onChange, onDelete, theme })
     onChange?.({
       ...selected,
       style: hasKeys ? nextStyle : undefined
+    })
+  }
+
+  const patchFocusTransform = (patch) => {
+    const next = resolveTransformFields({ ...focusTransform, ...patch })
+    onChange?.({
+      ...selected,
+      transform: next,
+      crop: {
+        x: Math.round(next.panX),
+        y: Math.round(next.panY),
+        scale: next.scale,
+      },
     })
   }
 
@@ -273,57 +294,57 @@ export default function LayerProperties({ selected, onChange, onDelete, theme })
           </div>
         ) : null}
 
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">FOCUS MODE (CROP)</div>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            <SmartInput
-              label="X"
-              type="number"
-              value={crop.x}
-              commitOn="blur"
-              onCommit={(v) =>
-                onChange?.({
-                  ...selected,
-                  crop: {
-                    ...crop,
-                    x: parseSafeInt(v, -1000, 1000)
-                  }
-                })
-              }
-            />
-            <SmartInput
-              label="Y"
-              type="number"
-              value={crop.y}
-              commitOn="blur"
-              onCommit={(v) =>
-                onChange?.({
-                  ...selected,
-                  crop: {
-                    ...crop,
-                    y: parseSafeInt(v, -1000, 1000)
-                  }
-                })
-              }
-            />
-            <SmartInput
-              label="Scale"
-              type="number"
-              value={crop.scale}
-              commitOn="blur"
-              onCommit={(v) => {
-                const safe = parseSafeFloat(v, 0.1, 4, 1)
-                onChange?.({
-                  ...selected,
-                  crop: {
-                    ...crop,
-                    scale: safe
-                  }
-                })
-              }}
-            />
+        {isImageStyleAtom(selected.atom) ? (
+          <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">FOCUS MODE (CROP)</div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <SmartInput
+                label="Pan X"
+                type="number"
+                value={focusTransform.panX}
+                commitOn="blur"
+                onCommit={(v) =>
+                  patchFocusTransform({
+                    panX: parseSafeInt(v, -1000, 1000),
+                  })
+                }
+              />
+              <SmartInput
+                label="Pan Y"
+                type="number"
+                value={focusTransform.panY}
+                commitOn="blur"
+                onCommit={(v) =>
+                  patchFocusTransform({
+                    panY: parseSafeInt(v, -1000, 1000),
+                  })
+                }
+              />
+              <SmartInput
+                label="Scale"
+                type="number"
+                value={focusTransform.scale}
+                commitOn="blur"
+                onCommit={(v) => {
+                  const trimmed = String(v ?? '').trim()
+                  const safe = trimmed === '' ? 1 : parseSafeFloat(v, 0.1, 10, 1)
+                  patchFocusTransform({ scale: safe })
+                }}
+              />
+              <SmartInput
+                label="Rotation (deg)"
+                type="number"
+                value={focusTransform.rotation}
+                commitOn="blur"
+                onCommit={(v) => {
+                  const trimmed = String(v ?? '').trim()
+                  const safe = trimmed === '' ? 0 : parseSafeFloat(v, -360, 360, 0)
+                  patchFocusTransform({ rotation: safe })
+                }}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="rounded-xl border border-white/10 bg-black/20 p-3">
           <div className="text-[10px] font-bold tracking-[0.22em] text-white/40">SMART-FRAME MASK (4 POINTS)</div>

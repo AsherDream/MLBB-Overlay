@@ -7,7 +7,7 @@
       {
         "instanceId": "T1_PICK_1773376085549_827348b2bed7",
         "atom": "T1_PICK",
-        "x": 720,
+        "x": 727,
         "y": 72,
         "width": 356,
         "height": 416,
@@ -36,14 +36,14 @@
           }
         ],
         "crop": {
-          "x": -34,
-          "y": 107,
+          "x": 38,
+          "y": -353,
           "scale": 1.95
         },
         "transform": {
           "scale": 1.95,
-          "panX": -33.658415790534946,
-          "panY": 106.76232338987083,
+          "panX": 38.04980592798968,
+          "panY": -353.1593745289423,
           "rotation": 0
         },
         "frameRotation": 0,
@@ -387,10 +387,10 @@
       {
         "instanceId": "T1_BAN_1773938040323_b443ed2f7ea7a",
         "atom": "T1_BAN",
-        "x": 10,
-        "y": 512,
-        "width": 158,
-        "height": 72,
+        "x": 84,
+        "y": 126,
+        "width": 247,
+        "height": 285,
         "visible": true,
         "locked": false,
         "zIndex": 17,
@@ -399,67 +399,13 @@
         },
         "crop": {
           "x": 0,
-          "y": 0,
+          "y": 5,
           "scale": 1
         },
         "transform": {
           "scale": 1,
           "panX": 0,
-          "panY": 0,
-          "rotation": 0
-        },
-        "frameRotation": 0,
-        "alias": "",
-        "src": ""
-      },
-      {
-        "instanceId": "T2_BAN_1780301377217_efbec7efeaec18",
-        "atom": "T2_BAN",
-        "x": 1173,
-        "y": 33,
-        "width": 567,
-        "height": 466,
-        "visible": true,
-        "locked": false,
-        "zIndex": 18,
-        "bind": {
-          "idx": 0
-        },
-        "crop": {
-          "x": -10,
-          "y": -9,
-          "scale": 1
-        },
-        "transform": {
-          "scale": 1,
-          "panX": -10.425695012881057,
-          "panY": -9.355883392229174,
-          "rotation": 0
-        },
-        "frameRotation": 0,
-        "alias": "",
-        "src": ""
-      },
-      {
-        "instanceId": "T1_SCORE_1781450100328_724f6bcb68099",
-        "atom": "T1_SCORE",
-        "x": 371,
-        "y": 165,
-        "width": 186,
-        "height": 203,
-        "visible": true,
-        "locked": false,
-        "zIndex": 16,
-        "bind": {},
-        "crop": {
-          "x": 0,
-          "y": 0,
-          "scale": 1
-        },
-        "transform": {
-          "scale": 1,
-          "panX": 0,
-          "panY": 0,
+          "panY": 4.945394601277565,
           "rotation": 0
         },
         "frameRotation": 0,

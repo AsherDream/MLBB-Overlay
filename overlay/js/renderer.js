@@ -101,55 +101,55 @@ export function applyThemeStyles(themeData) {
   THEME_COLOR_KEYS.forEach((key) => {
     const value = colors[key]
     if (value == null || value === '') return
-    setCssVar(`--theme-${key}`, value)
+    document.documentElement.style.setProperty(`--theme-${key}`, value)
   })
 
   if (colors.bluePrimary) {
-    setCssVar('--primary-color', colors.bluePrimary)
+    document.documentElement.style.setProperty('--primary-color', colors.bluePrimary)
   }
   if (colors.redPrimary) {
-    setCssVar('--secondary-color', colors.redPrimary)
+    document.documentElement.style.setProperty('--secondary-color', colors.redPrimary)
   }
 
   const typography =
     themeData.typography && typeof themeData.typography === 'object' ? themeData.typography : {}
   const fontMultiplier = Number(typography.fontSizeMultiplier)
   const safeMultiplier = Number.isFinite(fontMultiplier) && fontMultiplier > 0 ? fontMultiplier : 1
-  setCssVar('--font-size-multiplier', safeMultiplier)
+  document.documentElement.style.setProperty('--font-size-multiplier', safeMultiplier)
 
   const teamNameSize = Number(typography.teamNameSize)
   const playerNameSize = Number(typography.playerNameSize)
   const scoreSize = Number(typography.scoreSize)
-  setCssVar(
+  document.documentElement.style.setProperty(
     '--theme-teamNameSize',
     `${Number.isFinite(teamNameSize) && teamNameSize > 0 ? teamNameSize : 32}px`
   )
-  setCssVar(
+  document.documentElement.style.setProperty(
     '--theme-playerNameSize',
     `${Number.isFinite(playerNameSize) && playerNameSize > 0 ? playerNameSize : 24}px`
   )
-  setCssVar(
+  document.documentElement.style.setProperty(
     '--theme-scoreSize',
     `${Number.isFinite(scoreSize) && scoreSize > 0 ? scoreSize : 40}px`
   )
 
   const defaultFontFamily = String(typography.defaultFontFamily || 'Arial, sans-serif')
-  setCssVar('--theme-defaultFontFamily', defaultFontFamily)
+  document.documentElement.style.setProperty('--theme-defaultFontFamily', defaultFontFamily)
 
   const useCustomFont = Boolean(typography.useCustomFont)
   const fontFile = String(typography.fontFile || '').trim()
   if (useCustomFont && fontFile) {
     ensureThemeFontFace(fontFile)
-    setCssVar('--main-font', `'MLBBThemeFont', ${defaultFontFamily}`)
+    document.documentElement.style.setProperty('--main-font', `'MLBBThemeFont', ${defaultFontFamily}`)
   } else {
     removeThemeFontFace()
-    setCssVar('--main-font', defaultFontFamily)
+    document.documentElement.style.setProperty('--main-font', defaultFontFamily)
   }
 
   const toggles = themeData.toggles && typeof themeData.toggles === 'object' ? themeData.toggles : {}
-  setCssVar('--toggle-disableGlow', toggles.disableGlow ? '1' : '0')
-  setCssVar('--toggle-hidePattern', toggles.hidePattern ? '1' : '0')
-  setCssVar('--toggle-disableBoxShadow', toggles.disableBoxShadow ? '1' : '0')
+  document.documentElement.style.setProperty('--toggle-disableGlow', toggles.disableGlow ? '1' : '0')
+  document.documentElement.style.setProperty('--toggle-hidePattern', toggles.hidePattern ? '1' : '0')
+  document.documentElement.style.setProperty('--toggle-disableBoxShadow', toggles.disableBoxShadow ? '1' : '0')
 
   const images = themeData.images && typeof themeData.images === 'object' ? themeData.images : {}
 
