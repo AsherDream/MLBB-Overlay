@@ -272,6 +272,7 @@ function ensureComponentEl(domId, component) {
     el.classList.add('text')
   }
 
+  const fRot = Number.isFinite(Number(component.frameRotation)) ? Number(component.frameRotation) : 0
   const w = typeof component?.width === 'number' ? component.width : 0
   const h = typeof component?.height === 'number' ? component.height : 0
 
@@ -279,11 +280,10 @@ function ensureComponentEl(domId, component) {
   el.style.top = `${Math.round(component.y)}px`
   el.style.width = `${Math.round(w)}px`
   el.style.height = `${Math.round(h)}px`
-  el.style.overflow = 'hidden'
+  el.style.overflow = fRot !== 0 ? 'visible' : 'hidden'
   el.style.display = component.visible === false ? 'none' : 'block'
   el.style.position = 'absolute'
 
-  const fRot = Number.isFinite(Number(component.frameRotation)) ? Number(component.frameRotation) : 0
   const baseTransform = (el.style.transform || '').replace(/rotate\([^)]+\)/g, '').trim()
   el.style.transform = `${baseTransform} rotate(${fRot}deg)`.trim()
   el.style.transformOrigin = 'center center'
@@ -357,12 +357,13 @@ function applyTextStyles(el, component, atom) {
 
   el.style.fontSize = `${fontSize}px`
   el.style.fontFamily = fontFamily
+  const fRot = Number.isFinite(Number(component?.frameRotation)) ? Number(component.frameRotation) : 0
   el.style.textAlign = textAlign
   el.style.display = 'flex'
   el.style.alignItems = 'center'
   el.style.width = '100%'
   el.style.height = '100%'
-  el.style.overflow = 'hidden'
+  el.style.overflow = fRot !== 0 ? 'visible' : 'hidden'
   el.style.fontWeight = 'bold'
   el.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)'
 

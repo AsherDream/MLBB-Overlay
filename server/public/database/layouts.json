@@ -5,56 +5,10 @@
     "frame": "/Assets/frames/Draft_pick_frame.png",
     "components": [
       {
-        "instanceId": "T1_PICK_1773376085549_827348b2bed7",
-        "atom": "T1_PICK",
-        "x": 1322,
-        "y": 0,
-        "width": 426,
-        "height": 386,
-        "visible": true,
-        "locked": false,
-        "zIndex": 2,
-        "bind": {
-          "idx": 0
-        },
-        "maskPoints": [
-          {
-            "x": 200,
-            "y": 0
-          },
-          {
-            "x": 313,
-            "y": 0
-          },
-          {
-            "x": 313,
-            "y": 322
-          },
-          {
-            "x": 0,
-            "y": 200
-          }
-        ],
-        "crop": {
-          "x": -20,
-          "y": -7,
-          "scale": 1.8595505617977528
-        },
-        "transform": {
-          "scale": 1.8595505617977528,
-          "panX": -20,
-          "panY": -7,
-          "rotation": 0
-        },
-        "frameRotation": 0,
-        "alias": "",
-        "src": ""
-      },
-      {
         "instanceId": "T1_PICK_1773376118808_fca7f3f2581bb8",
         "atom": "T1_PICK",
-        "x": 205,
-        "y": 691,
+        "x": 188,
+        "y": 693,
         "width": 152,
         "height": 354,
         "visible": true,
@@ -329,34 +283,6 @@
         "src": ""
       },
       {
-        "instanceId": "T2_BAN_1773936305482_990d8e812c1f3",
-        "atom": "T2_BAN",
-        "x": 2723,
-        "y": 399,
-        "width": 187,
-        "height": 375,
-        "visible": true,
-        "locked": false,
-        "zIndex": 15,
-        "bind": {
-          "idx": 1
-        },
-        "crop": {
-          "x": 0,
-          "y": 0,
-          "scale": 1
-        },
-        "transform": {
-          "scale": 1,
-          "panX": 0,
-          "panY": 0,
-          "rotation": 0
-        },
-        "frameRotation": 0,
-        "alias": "",
-        "src": ""
-      },
-      {
         "instanceId": "T2_BAN_1773938029626_af3149ee76f47",
         "atom": "T2_BAN",
         "x": 1613,
@@ -385,30 +311,56 @@
         "src": ""
       },
       {
-        "instanceId": "T1_BAN_1773938040323_b443ed2f7ea7a",
-        "atom": "T1_BAN",
-        "x": 575,
-        "y": 89,
-        "width": 341,
-        "height": 285,
+        "instanceId": "T1_NAME_1782141347711_e4881b09cee558",
+        "atom": "T1_NAME",
+        "x": 519,
+        "y": 0,
+        "width": 627,
+        "height": 130,
         "visible": true,
         "locked": false,
-        "zIndex": 17,
+        "zIndex": 14,
+        "bind": {},
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "scale": 1
+        },
+        "transform": {
+          "scale": 1,
+          "panX": 0,
+          "panY": 0,
+          "rotation": 0
+        },
+        "frameRotation": 0,
+        "alias": "",
+        "src": ""
+      },
+      {
+        "instanceId": "T1_PICK_1782142027598_1177274a12b55",
+        "atom": "T1_PICK",
+        "x": 794,
+        "y": 191,
+        "width": 301,
+        "height": 328,
+        "visible": true,
+        "locked": false,
+        "zIndex": 12,
         "bind": {
           "idx": 0
         },
         "crop": {
-          "x": 36,
-          "y": 43,
-          "scale": 1.278592375366569
+          "x": 1,
+          "y": 15,
+          "scale": 1.3521594684385383
         },
         "transform": {
-          "scale": 1.278592375366569,
-          "panX": 36,
-          "panY": 43,
-          "rotation": -2
+          "scale": 1.3521594684385383,
+          "panX": 1,
+          "panY": 15,
+          "rotation": -91
         },
-        "frameRotation": 1,
+        "frameRotation": 91,
         "alias": "",
         "src": ""
       }
